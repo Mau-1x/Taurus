@@ -1,5 +1,6 @@
 import { Menu, ShoppingCart, User } from "lucide-react";
 import logo from "../../assets/logos/taurus-logo.png";
+import { Link } from "react-router-dom";
 
 function Navbar() {
   return (
@@ -28,29 +29,27 @@ function Navbar() {
         {/* Menú Desktop */}
         <nav className="hidden lg:flex items-center gap-8">
 
-          <a href="#" className="hover:text-red-500 transition">
-            Inicio
-          </a>
+          <Link to="/inicio">Inicio</Link>
 
-          <a href="#" className="hover:text-red-500 transition">
-            Servicios
-          </a>
+          <Link to="servicios/">Servicios</Link>
 
-          <a href="#" className="hover:text-red-500 transition">
+          <Link
+            to="/productos"
+            className="hover:text-red-500 transition"
+          >
             Productos
-          </a>
+          </Link>
 
-          <a href="#" className="hover:text-red-500 transition">
-            Reservas
-          </a>
+          <Link to="/reservas">Reservas</Link>
 
-          <a href="#" className="hover:text-red-500 transition">
+          <Link
+            to="/seguimiento"
+            className="transition hover:text-red-500"
+          >
             Seguimiento
-          </a>
-
-          <a href="#" className="hover:text-red-500 transition">
-            Contacto
-          </a>
+          </Link>
+          
+          <Link to="/contacto">Contacto</Link>
 
         </nav>
 
@@ -60,6 +59,15 @@ function Navbar() {
           <ShoppingCart className="cursor-pointer hover:text-red-500 transition" />
 
           <User className="cursor-pointer hover:text-red-500 transition" />
+
+          <a
+            href="https://wa.me/51999999999"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg bg-green-600 px-5 py-2 font-semibold hover:bg-green-700 transition"
+          >
+            WhatsApp
+          </a>
 
           <button className="rounded-lg bg-red-700 px-5 py-2 font-semibold hover:bg-red-800 transition">
             Iniciar sesión

@@ -1,0 +1,9 @@
+-- Crear la base de datos Taurus
+IF DB_ID('BD_TAURUS') IS NULL
+BEGIN
+    CREATE DATABASE BD_TAURUS;
+END;
+GO
+
+USE BD_TAURUS;
+GO
