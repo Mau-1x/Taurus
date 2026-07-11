@@ -1,50 +1,59 @@
 const express = require("express");
+
 const ProductoController = require(
   "../controllers/producto.controller"
 );
 
 const {
   verificarToken,
+  permitirRoles,
 } = require("../middlewares/auth.middleware");
 
 const router = express.Router();
 
-// Públicas
+// Rutas públicas
 router.get(
   "/categorias",
   ProductoController.obtenerCategorias
 );
 
-router.get("/", ProductoController.obtenerTodos);
+router.get(
+  "/",
+  ProductoController.obtenerTodos
+);
 
-// Administrativas
+// Desde aquí todo requiere sesión y rol
+router.use(
+  verificarToken,
+  permitirRoles(
+    "ADMINISTRADOR",
+    "TECNICO",
+    "VENDEDOR"
+  )
+);
+
 router.get(
   "/:id/movimientos",
-  verificarToken,
   ProductoController.obtenerMovimientos
 );
 
 router.post(
   "/",
-  verificarToken,
   ProductoController.crear
 );
 
 router.put(
   "/:id",
-  verificarToken,
   ProductoController.actualizar
 );
 
 router.delete(
   "/:id",
-  verificarToken,
   ProductoController.eliminar
 );
 
 router.patch(
   "/:id/stock",
-  verificarToken,
   ProductoController.moverStock
 );
 

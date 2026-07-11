@@ -20,20 +20,68 @@ import {
 } from "../../services/authService";
 
 const opciones = [
-  { nombre: "Dashboard", ruta: "/admin/dashboard", icono: LayoutDashboard },
-  { nombre: "Clientes", ruta: "/admin/clientes", icono: Users },
-  { nombre: "Equipos", ruta: "/admin/equipos", icono: Smartphone },
-  { nombre: "Reparaciones", ruta: "/admin/reparaciones", icono: Wrench },
-  { nombre: "Inventario", ruta: "/admin/inventario", icono: Package },
-  { nombre: "Ventas", ruta: "/admin/ventas", icono: ShoppingCart },
-  { nombre: "Reservas", ruta: "/admin/reservas", icono: CalendarDays },
-  { nombre: "Reportes", ruta: "/admin/reportes", icono: BarChart3 },
-  { nombre: "Configuración", ruta: "/admin/configuracion", icono: Settings },
+  {
+    nombre: "Dashboard",
+    ruta: "/admin/dashboard",
+    icono: LayoutDashboard,
+    roles: ["ADMINISTRADOR", "TECNICO", "VENDEDOR"],
+  },
+  {
+    nombre: "Clientes",
+    ruta: "/admin/clientes",
+    icono: Users,
+    roles: ["ADMINISTRADOR", "VENDEDOR"],
+  },
+  {
+    nombre: "Equipos",
+    ruta: "/admin/equipos",
+    icono: Smartphone,
+    roles: ["ADMINISTRADOR", "TECNICO"],
+  },
+  {
+    nombre: "Reparaciones",
+    ruta: "/admin/reparaciones",
+    icono: Wrench,
+    roles: ["ADMINISTRADOR", "TECNICO"],
+  },
+  {
+    nombre: "Inventario",
+    ruta: "/admin/inventario",
+    icono: Package,
+    roles: ["ADMINISTRADOR", "TECNICO", "VENDEDOR"],
+  },
+  {
+    nombre: "Ventas",
+    ruta: "/admin/ventas",
+    icono: ShoppingCart,
+    roles: ["ADMINISTRADOR", "VENDEDOR"],
+  },
+  {
+    nombre: "Reservas",
+    ruta: "/admin/reservas",
+    icono: CalendarDays,
+    roles: ["ADMINISTRADOR", "TECNICO", "VENDEDOR"],
+  },
+  {
+    nombre: "Reportes",
+    ruta: "/admin/reportes",
+    icono: BarChart3,
+    roles: ["ADMINISTRADOR"],
+  },
+  {
+    nombre: "Configuración",
+    ruta: "/admin/configuracion",
+    icono: Settings,
+    roles: ["ADMINISTRADOR"],
+  },
 ];
 
 function Sidebar() {
   const navigate = useNavigate();
   const usuario = obtenerUsuario();
+  const opcionesPermitidas = opciones.filter((opcion) =>
+  opcion.roles.includes(usuario?.rol)
+  );
 
   function manejarCerrarSesion() {
     cerrarSesion();
@@ -65,7 +113,7 @@ function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-2 overflow-y-auto px-4 py-6">
-        {opciones.map((opcion) => {
+          {opcionesPermitidas.map((opcion) => {
           const Icono = opcion.icono;
 
           return (

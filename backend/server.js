@@ -29,36 +29,14 @@ app.use("/api/auth", authRoutes);
 app.use("/api/reservas", reservaRoutes);
 app.use("/api/reparaciones", reparacionRoutes);
 app.use("/api/productos", productoRoutes);
-app.use(
-  "/api/dashboard",
-  verificarToken,
-  dashboardRoutes
-);
-
-app.use(
-  "/api/clientes",
-  verificarToken,
-  clienteRoutes
-);
-
-app.use(
-  "/api/equipos",
-  verificarToken,
-  equipoRoutes
-);
-
-app.use(
-  "/api/ventas",
-  verificarToken,
-  ventaRoutes
-);
-
-app.use(
-  "/api/reportes",
-  verificarToken,
-  reporteRoutes
-);
-
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/clientes", clienteRoutes);
+app.use("/api/equipos", equipoRoutes);
+app.use("/api/reparaciones", reparacionRoutes);
+app.use("/api/productos", productoRoutes);
+app.use("/api/ventas", ventaRoutes);
+app.use("/api/reservas", reservaRoutes);
+app.use("/api/reportes", reporteRoutes);
 app.use("/api/usuarios", usuarioRoutes);
 
 const PORT = process.env.PORT || 3000;

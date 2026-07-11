@@ -1,46 +1,40 @@
 const express = require("express");
+
 const ReservaController = require(
   "../controllers/reserva.controller"
 );
 
 const {
   verificarToken,
+  permitirRoles,
 } = require("../middlewares/auth.middleware");
 
 const router = express.Router();
 
-// Pública
+// Ruta pública
 router.post("/", ReservaController.crear);
 
-// Administrativas
-router.get(
-  "/",
+// Desde aquí requiere sesión y rol
+router.use(
   verificarToken,
-  ReservaController.obtenerTodas
+  permitirRoles(
+    "ADMINISTRADOR",
+    "TECNICO",
+    "VENDEDOR"
+  )
 );
 
-router.get(
-  "/:id",
-  verificarToken,
-  ReservaController.obtenerPorId
-);
+router.get("/", ReservaController.obtenerTodas);
 
-router.put(
-  "/:id",
-  verificarToken,
-  ReservaController.actualizar
-);
+router.get("/:id", ReservaController.obtenerPorId);
+
+router.put("/:id", ReservaController.actualizar);
 
 router.patch(
   "/:id/estado",
-  verificarToken,
   ReservaController.cambiarEstado
 );
 
-router.delete(
-  "/:id",
-  verificarToken,
-  ReservaController.eliminar
-);
+router.delete("/:id", ReservaController.eliminar);
 
 module.exports = router;

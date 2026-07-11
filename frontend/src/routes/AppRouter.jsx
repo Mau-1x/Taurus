@@ -9,6 +9,7 @@ import Tracking from "../pages/Tracking/Tracking";
 import Reservations from "../pages/Reservations/Reservations";
 import Login from "../pages/Login/Login";
 import ProtectedRoute from "./ProtectedRoute";
+import Unauthorized from "../pages/Unauthorized/Unauthorized";
 
 import Dashboard from "../pages/admin/Dashboard/Dashboard";
 import Clients from "../pages/admin/Clients/Clients";
@@ -33,6 +34,8 @@ function AppRouter() {
 
         <Route path="/login" element={<Login />} />
 
+        <Route path="/sin-permiso" element={<Unauthorized />} />
+
         <Route element={<ProtectedRoute />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route
@@ -41,12 +44,63 @@ function AppRouter() {
             />
 
             <Route path="dashboard" element={<Dashboard />} />
+          </Route>
+        </Route>
+
+        <Route
+          element={
+            <ProtectedRoute
+              rolesPermitidos={["ADMINISTRADOR", "VENDEDOR"]}
+            />
+          }
+        >
+          <Route path="/admin" element={<AdminLayout />}>
             <Route path="clientes" element={<Clients />} />
+            <Route path="ventas" element={<Sales />} />
+          </Route>
+        </Route>
+
+        <Route
+          element={
+            <ProtectedRoute
+              rolesPermitidos={["ADMINISTRADOR", "TECNICO"]}
+            />
+          }
+        >
+          <Route path="/admin" element={<AdminLayout />}>
             <Route path="equipos" element={<Equipment />} />
             <Route path="reparaciones" element={<Repairs />} />
+          </Route>
+        </Route>
+
+        <Route
+          element={
+            <ProtectedRoute
+              rolesPermitidos={[
+                "ADMINISTRADOR",
+                "VENDEDOR",
+                "TECNICO",
+              ]}
+            />
+          }
+        >
+          <Route path="/admin" element={<AdminLayout />}>
             <Route path="inventario" element={<Inventory />} />
-            <Route path="ventas" element={<Sales />} />
-            <Route path="reservas" element={<ReservationsAdmin />} />
+            <Route
+              path="reservas"
+              element={<ReservationsAdmin />}
+            />
+          </Route>
+        </Route>
+
+        <Route
+          element={
+            <ProtectedRoute
+              rolesPermitidos={["ADMINISTRADOR"]}
+            />
+          }
+        >
+          <Route path="/admin" element={<AdminLayout />}>
             <Route path="reportes" element={<Reports />} />
             <Route path="configuracion" element={<Settings />} />
           </Route>

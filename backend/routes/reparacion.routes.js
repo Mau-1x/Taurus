@@ -1,60 +1,60 @@
 const express = require("express");
+
 const ReparacionController = require(
   "../controllers/reparacion.controller"
 );
 
 const {
   verificarToken,
+  permitirRoles,
 } = require("../middlewares/auth.middleware");
 
 const router = express.Router();
 
-// Públicas
+// Ruta pública
 router.get(
   "/codigo/:codigo",
   ReparacionController.obtenerPorCodigo
 );
 
-// Administrativas
+// Desde aquí todo requiere autenticación y rol
+router.use(
+  verificarToken,
+  permitirRoles("ADMINISTRADOR", "TECNICO")
+);
+
 router.get(
   "/estados",
-  verificarToken,
   ReparacionController.obtenerEstados
 );
 
 router.get(
   "/:id/historial",
-  verificarToken,
   ReparacionController.obtenerHistorial
 );
 
 router.get(
   "/",
-  verificarToken,
   ReparacionController.obtenerTodos
 );
 
 router.get(
   "/:id",
-  verificarToken,
   ReparacionController.obtenerPorId
 );
 
 router.post(
   "/",
-  verificarToken,
   ReparacionController.crear
 );
 
 router.put(
   "/:id",
-  verificarToken,
   ReparacionController.actualizar
 );
 
 router.patch(
   "/:id/estado",
-  verificarToken,
   ReparacionController.cambiarEstado
 );
 
