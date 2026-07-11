@@ -40,8 +40,10 @@ function Navbar() {
             Productos
           </Link>
 
-          <Link to="/reservas">Reservas</Link>
-
+          <Link to="/reservas">
+            Reservas
+          </Link>
+          
           <Link
             to="/seguimiento"
             className="transition hover:text-red-500"

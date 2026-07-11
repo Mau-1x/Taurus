@@ -6,6 +6,7 @@ import AdminLayout from "../layouts/AdminLayout";
 import Home from "../pages/Home/Home";
 import Products from "../pages/Products/Products";
 import Tracking from "../pages/Tracking/Tracking";
+import Reservations from "../pages/Reservations/Reservations";
 
 import Dashboard from "../pages/admin/Dashboard/Dashboard";
 import Clients from "../pages/admin/Clients/Clients";
@@ -13,6 +14,7 @@ import Equipment from "../pages/admin/Equipment/Equipment";
 import Repairs from "../pages/admin/Repairs/Repairs";
 import Inventory from "../pages/admin/Inventory/Inventory";
 import Sales from "../pages/admin/Sales/Sales";
+import ReservationsAdmin from "../pages/admin/ReservationsAdmin/ReservationsAdmin";
 
 function AppRouter() {
   return (
@@ -23,6 +25,7 @@ function AppRouter() {
           <Route path="/" element={<Home />} />
           <Route path="/productos" element={<Products />} />
           <Route path="/seguimiento" element={<Tracking />} />
+          <Route path="/reservas" element={<Reservations />} />
         </Route>
 
         {/* Panel administrativo */}
@@ -34,6 +37,7 @@ function AppRouter() {
           <Route path="reparaciones" element={<Repairs />} />
           <Route path="inventario" element={<Inventory />} />
           <Route path="ventas" element={<Sales />} />
+          <Route path="reservas" element={<ReservationsAdmin />} />
         </Route>
       </Routes>
     </BrowserRouter>
