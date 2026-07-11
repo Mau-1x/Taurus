@@ -6,6 +6,7 @@ const { getConnection } = require("./config/database");
 const clienteRoutes = require("./routes/cliente.routes");
 const equipoRoutes = require("./routes/equipo.routes");
 const reparacionRoutes = require("./routes/reparacion.routes");
+const dashboardRoutes = require("./routes/dashboard.routes");
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use(express.json());
 app.use("/api/clientes", clienteRoutes);
 app.use("/api/equipos", equipoRoutes);
 app.use("/api/reparaciones", reparacionRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 const PORT = process.env.PORT || 3000;
 
