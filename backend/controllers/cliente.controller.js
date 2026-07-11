@@ -47,6 +47,59 @@ class ClienteController {
       });
     }
 
+    if (!/^\d{9}$/.test(celular)) {
+      return res.status(400).json({
+        ok: false,
+        message:
+          "El celular debe contener exactamente 9 números",
+      });
+    }
+
+    const expresionNombre =
+      /^[a-zA-ZÁÉÍÓÚáéíóúÑñüÜ\s-]{2,100}$/;
+
+    if (!expresionNombre.test(nombres.trim())) {
+      return res.status(400).json({
+        ok: false,
+        message: "Los nombres no son válidos",
+      });
+    }
+
+    if (!expresionNombre.test(apellidoPaterno.trim())) {
+      return res.status(400).json({
+        ok: false,
+        message: "El apellido paterno no es válido",
+      });
+    }
+
+    if (
+      apellidoMaterno &&
+      !expresionNombre.test(apellidoMaterno.trim())
+    ) {
+      return res.status(400).json({
+        ok: false,
+        message: "El apellido materno no es válido",
+      });
+    }
+
+    if (
+      email &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    ) {
+      return res.status(400).json({
+        ok: false,
+        message: "El correo electrónico no es válido",
+      });
+    }
+
+    if (direccion && direccion.length > 200) {
+      return res.status(400).json({
+        ok: false,
+        message:
+          "La dirección no puede superar los 200 caracteres",
+      });
+    }
+
     const cliente = await ClienteModel.crear({
       dni,
       nombres,
@@ -121,7 +174,53 @@ static async actualizar(req, res) {
     if (!/^\d{9}$/.test(celular)) {
       return res.status(400).json({
         ok: false,
-        message: "El celular debe tener exactamente 9 números",
+        message:
+          "El celular debe contener exactamente 9 números",
+      });
+    }
+
+    const expresionNombre =
+      /^[a-zA-ZÁÉÍÓÚáéíóúÑñüÜ\s-]{2,100}$/;
+
+    if (!expresionNombre.test(nombres.trim())) {
+      return res.status(400).json({
+        ok: false,
+        message: "Los nombres no son válidos",
+      });
+    }
+
+    if (!expresionNombre.test(apellidoPaterno.trim())) {
+      return res.status(400).json({
+        ok: false,
+        message: "El apellido paterno no es válido",
+      });
+    }
+
+    if (
+      apellidoMaterno &&
+      !expresionNombre.test(apellidoMaterno.trim())
+    ) {
+      return res.status(400).json({
+        ok: false,
+        message: "El apellido materno no es válido",
+      });
+    }
+
+    if (
+      email &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    ) {
+      return res.status(400).json({
+        ok: false,
+        message: "El correo electrónico no es válido",
+      });
+    }
+
+    if (direccion && direccion.length > 200) {
+      return res.status(400).json({
+        ok: false,
+        message:
+          "La dirección no puede superar los 200 caracteres",
       });
     }
 

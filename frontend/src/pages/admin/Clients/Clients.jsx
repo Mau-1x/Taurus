@@ -103,7 +103,34 @@ function Clients() {
   }
 
   function manejarCambio(evento) {
-    const { name, value } = evento.target;
+    const { name } = evento.target;
+    let { value } = evento.target;
+
+    if (name === "dni") {
+      value = value.replace(/\D/g, "").slice(0, 8);
+    }
+
+    if (name === "celular") {
+      value = value.replace(/\D/g, "").slice(0, 9);
+    }
+
+    if (
+      name === "nombres" ||
+      name === "apellidoPaterno" ||
+      name === "apellidoMaterno"
+    ) {
+      value = value
+        .replace(/[^a-zA-ZÁÉÍÓÚáéíóúÑñüÜ\s-]/g, "")
+        .slice(0, 100);
+    }
+
+    if (name === "email") {
+      value = value.slice(0, 100);
+    }
+
+    if (name === "direccion") {
+      value = value.slice(0, 200);
+    }
 
     setFormulario((estadoAnterior) => ({
       ...estadoAnterior,
@@ -118,6 +145,63 @@ function Clients() {
       setGuardando(true);
       setError("");
       setMensaje("");
+
+      if (!/^\d{8}$/.test(formulario.dni)) {
+        throw new Error(
+          "El DNI debe contener exactamente 8 números"
+        );
+      }
+
+      if (!/^\d{9}$/.test(formulario.celular)) {
+        throw new Error(
+          "El celular debe contener exactamente 9 números"
+        );
+      }
+
+      const expresionNombre =
+        /^[a-zA-ZÁÉÍÓÚáéíóúÑñüÜ\s-]{2,100}$/;
+
+      if (!expresionNombre.test(formulario.nombres.trim())) {
+        throw new Error(
+          "Los nombres deben contener solo letras y tener mínimo 2 caracteres"
+        );
+      }
+
+      if (
+        !expresionNombre.test(
+          formulario.apellidoPaterno.trim()
+        )
+      ) {
+        throw new Error(
+          "El apellido paterno debe contener solo letras"
+        );
+      }
+
+      if (
+        formulario.apellidoMaterno &&
+        !expresionNombre.test(
+          formulario.apellidoMaterno.trim()
+        )
+      ) {
+        throw new Error(
+          "El apellido materno debe contener solo letras"
+        );
+      }
+
+      if (
+        formulario.email &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+          formulario.email
+        )
+      ) {
+        throw new Error("El correo electrónico no es válido");
+      }
+
+      if (formulario.direccion.length > 200) {
+        throw new Error(
+          "La dirección no puede superar los 200 caracteres"
+        );
+      }
 
       if (clienteEditando) {
         await actualizarCliente(
@@ -368,6 +452,8 @@ function ModalCliente({
             value={formulario.dni}
             onChange={manejarCambio}
             maxLength={8}
+            inputMode="numeric"
+            placeholder="8 dígitos"
             required
           />
 
@@ -376,6 +462,8 @@ function ModalCliente({
             name="nombres"
             value={formulario.nombres}
             onChange={manejarCambio}
+            maxLength={20}
+            placeholder="Ejemplo: Patricio Roberto"
             required
           />
 
@@ -384,6 +472,7 @@ function ModalCliente({
             name="apellidoPaterno"
             value={formulario.apellidoPaterno}
             onChange={manejarCambio}
+            maxLength={20}
             required
           />
 
@@ -392,6 +481,7 @@ function ModalCliente({
             name="apellidoMaterno"
             value={formulario.apellidoMaterno}
             onChange={manejarCambio}
+            maxLength={20}
           />
 
           <Campo
@@ -399,6 +489,9 @@ function ModalCliente({
             name="celular"
             value={formulario.celular}
             onChange={manejarCambio}
+            maxLength={9}
+            inputMode="numeric"
+            placeholder="9 dígitos"
             required
           />
 
@@ -408,16 +501,18 @@ function ModalCliente({
             type="email"
             value={formulario.email}
             onChange={manejarCambio}
+            maxLength={100}
+            placeholder="ejemplo@correo.com"
           />
 
-          <div className="md:col-span-2">
-            <Campo
-              label="Dirección"
-              name="direccion"
-              value={formulario.direccion}
-              onChange={manejarCambio}
-            />
-          </div>
+          <Campo
+            label="Dirección"
+            name="direccion"
+            value={formulario.direccion}
+            onChange={manejarCambio}
+            maxLength={200}
+            placeholder="Máximo 200 caracteres"
+          />
 
           {error && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 md:col-span-2">
@@ -473,12 +568,16 @@ function Campo({
   onChange,
   required = false,
   maxLength,
+  inputMode,
+  placeholder,
 }) {
   return (
     <label className="block">
       <span className="mb-2 block text-sm font-semibold text-gray-700">
         {label}
-        {required && <span className="text-red-600"> *</span>}
+        {required && (
+          <span className="text-red-600"> *</span>
+        )}
       </span>
 
       <input
@@ -488,8 +587,17 @@ function Campo({
         onChange={onChange}
         required={required}
         maxLength={maxLength}
+        inputMode={inputMode}
+        placeholder={placeholder}
+        autoComplete="off"
         className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-red-600"
       />
+
+      {maxLength && (
+        <p className="mt-1 text-right text-xs text-gray-500">
+          {value.length}/{maxLength}
+        </p>
+      )}
     </label>
   );
 }
