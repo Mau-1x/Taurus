@@ -12,6 +12,7 @@ const ventaRoutes = require("./routes/venta.routes");
 const reservaRoutes = require("./routes/reserva.routes");
 const authRoutes = require("./routes/auth.routes");
 const reporteRoutes = require("./routes/reporte.routes");
+const usuarioRoutes = require("./routes/usuario.routes");
 const {
   verificarToken,
   permitirRoles,
@@ -57,6 +58,8 @@ app.use(
   verificarToken,
   reporteRoutes
 );
+
+app.use("/api/usuarios", usuarioRoutes);
 
 const PORT = process.env.PORT || 3000;
 

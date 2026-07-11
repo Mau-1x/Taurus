@@ -18,6 +18,7 @@ import Inventory from "../pages/admin/Inventory/Inventory";
 import Sales from "../pages/admin/Sales/Sales";
 import ReservationsAdmin from "../pages/admin/ReservationsAdmin/ReservationsAdmin";
 import Reports from "../pages/admin/Reports/Reports";
+import Settings from "../pages/admin/Settings/Settings";
 
 function AppRouter() {
   return (
@@ -47,6 +48,7 @@ function AppRouter() {
             <Route path="ventas" element={<Sales />} />
             <Route path="reservas" element={<ReservationsAdmin />} />
             <Route path="reportes" element={<Reports />} />
+            <Route path="configuracion" element={<Settings />} />
           </Route>
         </Route>
       </Routes>
