@@ -17,6 +17,7 @@ import Repairs from "../pages/admin/Repairs/Repairs";
 import Inventory from "../pages/admin/Inventory/Inventory";
 import Sales from "../pages/admin/Sales/Sales";
 import ReservationsAdmin from "../pages/admin/ReservationsAdmin/ReservationsAdmin";
+import Reports from "../pages/admin/Reports/Reports";
 
 function AppRouter() {
   return (
@@ -44,10 +45,8 @@ function AppRouter() {
             <Route path="reparaciones" element={<Repairs />} />
             <Route path="inventario" element={<Inventory />} />
             <Route path="ventas" element={<Sales />} />
-            <Route
-              path="reservas"
-              element={<ReservationsAdmin />}
-            />
+            <Route path="reservas" element={<ReservationsAdmin />} />
+            <Route path="reportes" element={<Reports />} />
           </Route>
         </Route>
       </Routes>
