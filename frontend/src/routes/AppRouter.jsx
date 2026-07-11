@@ -7,6 +7,8 @@ import Home from "../pages/Home/Home";
 import Products from "../pages/Products/Products";
 import Tracking from "../pages/Tracking/Tracking";
 import Reservations from "../pages/Reservations/Reservations";
+import Login from "../pages/Login/Login";
+import ProtectedRoute from "./ProtectedRoute";
 
 import Dashboard from "../pages/admin/Dashboard/Dashboard";
 import Clients from "../pages/admin/Clients/Clients";
@@ -20,24 +22,33 @@ function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Páginas públicas */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/productos" element={<Products />} />
-          <Route path="/seguimiento" element={<Tracking />} />
           <Route path="/reservas" element={<Reservations />} />
+          <Route path="/seguimiento" element={<Tracking />} />
         </Route>
 
-        {/* Panel administrativo */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="clientes" element={<Clients />} />
-          <Route path="equipos" element={<Equipment />} />
-          <Route path="reparaciones" element={<Repairs />} />
-          <Route path="inventario" element={<Inventory />} />
-          <Route path="ventas" element={<Sales />} />
-          <Route path="reservas" element={<ReservationsAdmin />} />
+        <Route path="/login" element={<Login />} />
+
+        <Route element={<ProtectedRoute />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route
+              index
+              element={<Navigate to="dashboard" replace />}
+            />
+
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="clientes" element={<Clients />} />
+            <Route path="equipos" element={<Equipment />} />
+            <Route path="reparaciones" element={<Repairs />} />
+            <Route path="inventario" element={<Inventory />} />
+            <Route path="ventas" element={<Sales />} />
+            <Route
+              path="reservas"
+              element={<ReservationsAdmin />}
+            />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>
