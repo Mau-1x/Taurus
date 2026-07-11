@@ -1,3 +1,5 @@
+import { apiFetch } from "./apiClient";
+
 const API_URL = "http://localhost:3000/api/ventas";
 
 async function procesarRespuesta(respuesta) {
@@ -11,23 +13,20 @@ async function procesarRespuesta(respuesta) {
 }
 
 export async function obtenerVentas() {
-  const respuesta = await fetch(API_URL);
+  const respuesta = await apiFetch(API_URL);
   const resultado = await procesarRespuesta(respuesta);
   return resultado.data;
 }
 
 export async function obtenerVentaPorId(idVenta) {
-  const respuesta = await fetch(`${API_URL}/${idVenta}`);
+  const respuesta = await apiFetch(`${API_URL}/${idVenta}`);
   const resultado = await procesarRespuesta(respuesta);
   return resultado.data;
 }
 
 export async function crearVenta(datos) {
-  const respuesta = await fetch(API_URL, {
+  const respuesta = await apiFetch(API_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(datos),
   });
 
@@ -35,7 +34,7 @@ export async function crearVenta(datos) {
 }
 
 export async function anularVenta(idVenta) {
-  const respuesta = await fetch(`${API_URL}/${idVenta}/anular`, {
+  const respuesta = await apiFetch(`${API_URL}/${idVenta}/anular`, {
     method: "PATCH",
   });
 

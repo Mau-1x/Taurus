@@ -1,3 +1,5 @@
+import { apiFetch } from "./apiClient";
+
 const API_URL = "http://localhost:3000/api/productos";
 
 async function procesarRespuesta(respuesta) {
@@ -25,9 +27,6 @@ export async function obtenerCategorias() {
 export async function crearProducto(datos) {
   const respuesta = await fetch(API_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(datos),
   });
 
@@ -37,9 +36,6 @@ export async function crearProducto(datos) {
 export async function actualizarProducto(idProducto, datos) {
   const respuesta = await fetch(`${API_URL}/${idProducto}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(datos),
   });
 
@@ -57,9 +53,6 @@ export async function eliminarProducto(idProducto) {
 export async function moverStock(idProducto, datos) {
   const respuesta = await fetch(`${API_URL}/${idProducto}/stock`, {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(datos),
   });
 

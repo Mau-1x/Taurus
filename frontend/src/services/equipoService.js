@@ -1,3 +1,5 @@
+import { apiFetch } from "./apiClient";
+
 const API_URL = "http://localhost:3000/api/equipos";
 
 async function procesarRespuesta(respuesta) {
@@ -11,19 +13,19 @@ async function procesarRespuesta(respuesta) {
 }
 
 export async function obtenerEquipos() {
-  const respuesta = await fetch(API_URL);
+  const respuesta = await apiFetch(API_URL);
   const resultado = await procesarRespuesta(respuesta);
   return resultado.data;
 }
 
 export async function obtenerMarcas() {
-  const respuesta = await fetch(`${API_URL}/marcas`);
+  const respuesta = await apiFetch(`${API_URL}/marcas`);
   const resultado = await procesarRespuesta(respuesta);
   return resultado.data;
 }
 
 export async function obtenerModelosPorMarca(idMarca) {
-  const respuesta = await fetch(
+  const respuesta = await apiFetch(
     `${API_URL}/modelos/marca/${idMarca}`
   );
 
@@ -32,11 +34,8 @@ export async function obtenerModelosPorMarca(idMarca) {
 }
 
 export async function crearEquipo(datos) {
-  const respuesta = await fetch(API_URL, {
+  const respuesta = await apiFetch(API_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(datos),
   });
 
@@ -44,11 +43,8 @@ export async function crearEquipo(datos) {
 }
 
 export async function actualizarEquipo(idEquipo, datos) {
-  const respuesta = await fetch(`${API_URL}/${idEquipo}`, {
+  const respuesta = await apiFetch(`${API_URL}/${idEquipo}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(datos),
   });
 
@@ -56,7 +52,7 @@ export async function actualizarEquipo(idEquipo, datos) {
 }
 
 export async function eliminarEquipo(idEquipo) {
-  const respuesta = await fetch(`${API_URL}/${idEquipo}`, {
+  const respuesta = await apiFetch(`${API_URL}/${idEquipo}`, {
     method: "DELETE",
   });
 

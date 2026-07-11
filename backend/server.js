@@ -11,20 +11,45 @@ const productoRoutes = require("./routes/producto.routes");
 const ventaRoutes = require("./routes/venta.routes");
 const reservaRoutes = require("./routes/reserva.routes");
 const authRoutes = require("./routes/auth.routes");
+const {
+  verificarToken,
+  permitirRoles,
+} = require("./middlewares/auth.middleware");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.use("/api/clientes", clienteRoutes);
-app.use("/api/equipos", equipoRoutes);
-app.use("/api/reparaciones", reparacionRoutes);
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/productos", productoRoutes);
-app.use("/api/ventas", ventaRoutes);
-app.use("/api/reservas", reservaRoutes);
 app.use("/api/auth", authRoutes);
+
+// Públicas
+app.use("/api/reservas", reservaRoutes);
+app.use("/api/reparaciones", reparacionRoutes);
+app.use("/api/productos", productoRoutes);
+app.use(
+  "/api/dashboard",
+  verificarToken,
+  dashboardRoutes
+);
+
+app.use(
+  "/api/clientes",
+  verificarToken,
+  clienteRoutes
+);
+
+app.use(
+  "/api/equipos",
+  verificarToken,
+  equipoRoutes
+);
+
+app.use(
+  "/api/ventas",
+  verificarToken,
+  ventaRoutes
+);
 
 const PORT = process.env.PORT || 3000;
 

@@ -3,15 +3,49 @@ const ProductoController = require(
   "../controllers/producto.controller"
 );
 
+const {
+  verificarToken,
+} = require("../middlewares/auth.middleware");
+
 const router = express.Router();
 
-router.get("/categorias", ProductoController.obtenerCategorias);
-router.get("/:id/movimientos", ProductoController.obtenerMovimientos);
+// Públicas
+router.get(
+  "/categorias",
+  ProductoController.obtenerCategorias
+);
 
 router.get("/", ProductoController.obtenerTodos);
-router.post("/", ProductoController.crear);
-router.put("/:id", ProductoController.actualizar);
-router.delete("/:id", ProductoController.eliminar);
-router.patch("/:id/stock", ProductoController.moverStock);
+
+// Administrativas
+router.get(
+  "/:id/movimientos",
+  verificarToken,
+  ProductoController.obtenerMovimientos
+);
+
+router.post(
+  "/",
+  verificarToken,
+  ProductoController.crear
+);
+
+router.put(
+  "/:id",
+  verificarToken,
+  ProductoController.actualizar
+);
+
+router.delete(
+  "/:id",
+  verificarToken,
+  ProductoController.eliminar
+);
+
+router.patch(
+  "/:id/stock",
+  verificarToken,
+  ProductoController.moverStock
+);
 
 module.exports = router;

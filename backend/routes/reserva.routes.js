@@ -1,16 +1,46 @@
 const express = require("express");
-
 const ReservaController = require(
   "../controllers/reserva.controller"
 );
 
+const {
+  verificarToken,
+} = require("../middlewares/auth.middleware");
+
 const router = express.Router();
 
-router.get("/", ReservaController.obtenerTodas);
-router.get("/:id", ReservaController.obtenerPorId);
+// Pública
 router.post("/", ReservaController.crear);
-router.put("/:id", ReservaController.actualizar);
-router.patch("/:id/estado", ReservaController.cambiarEstado);
-router.delete("/:id", ReservaController.eliminar);
+
+// Administrativas
+router.get(
+  "/",
+  verificarToken,
+  ReservaController.obtenerTodas
+);
+
+router.get(
+  "/:id",
+  verificarToken,
+  ReservaController.obtenerPorId
+);
+
+router.put(
+  "/:id",
+  verificarToken,
+  ReservaController.actualizar
+);
+
+router.patch(
+  "/:id/estado",
+  verificarToken,
+  ReservaController.cambiarEstado
+);
+
+router.delete(
+  "/:id",
+  verificarToken,
+  ReservaController.eliminar
+);
 
 module.exports = router;

@@ -1,7 +1,9 @@
+import { apiFetch } from "./apiClient";
+
 const API_URL = "http://localhost:3000/api/dashboard";
 
 export async function obtenerDashboard() {
-  const respuesta = await fetch(API_URL);
+  const respuesta = await apiFetch(API_URL);
   const resultado = await respuesta.json();
 
   if (!respuesta.ok) {

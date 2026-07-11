@@ -1,3 +1,5 @@
+import { apiFetch } from "./apiClient";
+
 const API_URL = "http://localhost:3000/api/reservas";
 
 async function procesarRespuesta(respuesta) {
@@ -13,14 +15,14 @@ async function procesarRespuesta(respuesta) {
 }
 
 export async function obtenerReservas() {
-  const respuesta = await fetch(API_URL);
+  const respuesta = await apiFetch(API_URL);
   const resultado = await procesarRespuesta(respuesta);
 
   return resultado.data;
 }
 
 export async function obtenerReservaPorId(idReserva) {
-  const respuesta = await fetch(`${API_URL}/${idReserva}`);
+  const respuesta = await apiFetch(`${API_URL}/${idReserva}`);
   const resultado = await procesarRespuesta(respuesta);
 
   return resultado.data;
@@ -39,11 +41,8 @@ export async function crearReserva(datos) {
 }
 
 export async function actualizarReserva(idReserva, datos) {
-  const respuesta = await fetch(`${API_URL}/${idReserva}`, {
+  const respuesta = await apiFetch(`${API_URL}/${idReserva}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(datos),
   });
 
@@ -51,13 +50,10 @@ export async function actualizarReserva(idReserva, datos) {
 }
 
 export async function cambiarEstadoReserva(idReserva, estado) {
-  const respuesta = await fetch(
+  const respuesta = await apiFetch(
     `${API_URL}/${idReserva}/estado`,
     {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({ estado }),
     }
   );
@@ -66,7 +62,7 @@ export async function cambiarEstadoReserva(idReserva, estado) {
 }
 
 export async function eliminarReserva(idReserva) {
-  const respuesta = await fetch(`${API_URL}/${idReserva}`, {
+  const respuesta = await apiFetch(`${API_URL}/${idReserva}`, {
     method: "DELETE",
   });
 
