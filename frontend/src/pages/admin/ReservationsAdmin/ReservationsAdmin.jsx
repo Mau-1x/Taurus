@@ -132,6 +132,14 @@ function ReservationsAdmin() {
       setGuardando(true);
       setError("");
 
+      const hora = formulario.horaReserva;
+
+      if (hora < "10:00" || hora > "21:00") {
+        throw new Error(
+          "El horario de atención es de 10:00 a. m. a 9:00 p. m."
+        );
+      }
+
       await actualizarReserva(
         reservaEditando.IDRESERVA,
         {
@@ -510,6 +518,8 @@ function ReservationsAdmin() {
                 type="time"
                 value={formulario.horaReserva}
                 onChange={manejarCambio}
+                min="10:00"
+                max="21:00"
                 required
               />
 
@@ -603,6 +613,8 @@ function Campo({
   value,
   onChange,
   required = false,
+  min,
+  max,
 }) {
   return (
     <label>
@@ -617,6 +629,8 @@ function Campo({
         value={value}
         onChange={onChange}
         required={required}
+        min={min}
+        max={max}
         className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-red-600"
       />
     </label>
@@ -663,28 +677,47 @@ function formatearFechaInput(fecha) {
 function formatearHora(hora) {
   if (!hora) return "Sin hora";
 
-  if (typeof hora === "string") {
-    return hora.substring(0, 5);
+  const texto = String(hora);
+
+  let horas;
+  let minutos;
+
+  const horaISO = texto.match(/T(\d{2}):(\d{2})/);
+  const horaSimple = texto.match(/^(\d{2}):(\d{2})/);
+
+  if (horaISO) {
+    horas = Number(horaISO[1]);
+    minutos = horaISO[2];
+  } else if (horaSimple) {
+    horas = Number(horaSimple[1]);
+    minutos = horaSimple[2];
+  } else {
+    return "Sin hora";
   }
 
-  return new Intl.DateTimeFormat("es-PE", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(hora));
+  const periodo = horas >= 12 ? "p. m." : "a. m.";
+  const hora12 = horas % 12 || 12;
+
+  return `${hora12}:${minutos} ${periodo}`;
 }
 
 function formatearHoraInput(hora) {
   if (!hora) return "";
 
-  if (typeof hora === "string") {
-    return hora.substring(0, 5);
+  const texto = String(hora);
+
+  const horaISO = texto.match(/T(\d{2}):(\d{2})/);
+  const horaSimple = texto.match(/^(\d{2}):(\d{2})/);
+
+  if (horaISO) {
+    return `${horaISO[1]}:${horaISO[2]}`;
   }
 
-  const fecha = new Date(hora);
+  if (horaSimple) {
+    return `${horaSimple[1]}:${horaSimple[2]}`;
+  }
 
-  return `${String(fecha.getHours()).padStart(2, "0")}:${String(
-    fecha.getMinutes()
-  ).padStart(2, "0")}`;
+  return "";
 }
 
 export default ReservationsAdmin;

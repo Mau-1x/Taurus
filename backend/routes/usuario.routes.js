@@ -16,10 +16,29 @@ router.use(
   permitirRoles("ADMINISTRADOR")
 );
 
-router.get("/roles", UsuarioController.obtenerRoles);
-router.get("/", UsuarioController.obtenerTodos);
-router.post("/", UsuarioController.crear);
-router.put("/:id", UsuarioController.actualizar);
-router.patch("/:id/estado", UsuarioController.cambiarEstado);
+router.get(
+  "/roles",
+  UsuarioController.obtenerRoles
+);
+
+router.get(
+  "/",
+  UsuarioController.obtenerTodos
+);
+
+router.post(
+  "/",
+  UsuarioController.crear
+);
+
+router.put(
+  "/:id",
+  UsuarioController.actualizar
+);
+
+router.patch(
+  "/:id/estado",
+  UsuarioController.cambiarEstado
+);
 
 module.exports = router;

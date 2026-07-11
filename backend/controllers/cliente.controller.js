@@ -114,7 +114,14 @@ static async actualizar(req, res) {
     if (!/^\d{8}$/.test(dni)) {
       return res.status(400).json({
         ok: false,
-        message: "El DNI debe contener exactamente 8 números",
+        message: "El DNI debe tener exactamente 8 números",
+      });
+    }
+
+    if (!/^\d{9}$/.test(celular)) {
+      return res.status(400).json({
+        ok: false,
+        message: "El celular debe tener exactamente 9 números",
       });
     }
 

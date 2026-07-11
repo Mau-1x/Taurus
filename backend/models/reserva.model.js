@@ -1,24 +1,30 @@
 const { sql, getConnection } = require("../config/database");
 
 function convertirHora(hora) {
+  if (!hora || !/^\d{2}:\d{2}(:\d{2})?$/.test(hora)) {
+    throw new Error("La hora ingresada no es válida");
+  }
+
   const [horas, minutos, segundos = "0"] = hora.split(":");
 
-  const fecha = new Date();
-  fecha.setHours(
-    Number(horas),
-    Number(minutos),
-    Number(segundos),
-    0
+  return new Date(
+    Date.UTC(
+      1970,
+      0,
+      1,
+      Number(horas),
+      Number(minutos),
+      Number(segundos),
+      0
+    )
   );
-
-  return fecha;
 }
 
 class ReservaModel {
   static async obtenerTodas() {
-    const pool = await getConnection();
+  const pool = await getConnection();
 
-    const result = await pool.request().query(`
+  const resultado = await pool.request().query(`
       SELECT
         r.IDRESERVA,
         r.IDCLIENTE,
@@ -28,15 +34,14 @@ class ReservaModel {
         r.SERVICIO,
         r.DESCRIPCION,
         r.FECHA_RESERVA,
-        r.HORA_RESERVA,
-        r.ESTADO,
+        CONVERT(VARCHAR(5), r.HORA_RESERVA, 108) AS HORA_RESERVA,
         r.OBSERVACIONES,
-        r.FECHA_REGISTRO
+        r.ESTADO
       FROM RESERVA r
-      ORDER BY r.FECHA_RESERVA DESC, r.HORA_RESERVA DESC
+      ORDER BY r.IDRESERVA DESC
     `);
 
-    return result.recordset;
+    return resultado.recordset;
   }
 
   static async obtenerPorId(idReserva) {

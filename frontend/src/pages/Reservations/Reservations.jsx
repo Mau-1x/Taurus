@@ -70,6 +70,15 @@ function Reservations() {
         );
       }
 
+      if (
+        formulario.horaReserva < "10:00" ||
+        formulario.horaReserva > "21:00"
+      ) {
+        throw new Error(
+          "El horario de atención es de 10:00 a. m. a 9:00 p. m."
+        );
+      }
+
       await crearReserva({
         ...formulario,
         correo: formulario.correo || null,
@@ -166,6 +175,8 @@ function Reservations() {
               label="Hora"
               name="horaReserva"
               type="time"
+              min="10:00"
+              max="21:00"
               value={formulario.horaReserva}
               onChange={manejarCambio}
               required
@@ -242,7 +253,7 @@ function Reservations() {
             <div className="mt-7 space-y-5">
               <Informacion
                 titulo="Horario"
-                texto="Lunes a sábado, de 9:00 a. m. a 7:00 p. m."
+                texto="Lunes a sábado, de 10:00 a. m. a 9:00 p. m."
               />
 
               <Informacion
@@ -272,6 +283,7 @@ function Campo({
   required = false,
   maxLength,
   min,
+  max,
 }) {
   return (
     <label>
@@ -289,6 +301,7 @@ function Campo({
         required={required}
         maxLength={maxLength}
         min={min}
+        max={max}
         className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-red-600"
       />
     </label>

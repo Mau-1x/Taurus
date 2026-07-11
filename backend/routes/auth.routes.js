@@ -12,6 +12,8 @@ const router = express.Router();
 
 router.post(
   "/registro-admin",
+  verificarToken,
+  permitirRoles("ADMINISTRADOR"),
   AuthController.registrarAdministrador
 );
 

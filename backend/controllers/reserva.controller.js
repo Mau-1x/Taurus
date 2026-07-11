@@ -45,6 +45,8 @@ class ReservaController {
     }
   }
 
+  
+
   static async crear(req, res) {
     try {
       const {
@@ -54,7 +56,34 @@ class ReservaController {
         fechaReserva,
         horaReserva,
       } = req.body;
+      
+      const fechaSeleccionada = new Date(
+        `${fechaReserva}T${horaReserva}`
+      );
 
+      if (Number.isNaN(fechaSeleccionada.getTime())) {
+        return res.status(400).json({
+          ok: false,
+          message: "La fecha u hora no es válida",
+        });
+      }
+
+      if (fechaSeleccionada < new Date()) {
+        return res.status(400).json({
+          ok: false,
+          message: "No puedes reservar una fecha pasada",
+        });
+      }
+      const hora = horaReserva.substring(0, 5);
+
+      if (hora < "10:00" || hora > "21:00") {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "El horario de atención es de 10:00 a. m. a 9:00 p. m.",
+        });
+      }
+      
       if (
         !nombreCliente ||
         !celular ||
