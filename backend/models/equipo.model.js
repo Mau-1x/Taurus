@@ -99,6 +99,24 @@ class EquipoModel {
     return result.recordset;
   }
 
+  static async validarModeloMarca(idModelo, idMarca) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input("idModelo", sql.Int, idModelo)
+      .input("idMarca", sql.Int, idMarca)
+      .query(`
+        SELECT IDMODELO
+        FROM MODELO
+        WHERE IDMODELO = @idModelo
+          AND IDMARCA = @idMarca
+          AND ESTADO = 1
+      `);
+
+    return result.recordset.length > 0;
+  }
+
   static async crear(datos) {
     const pool = await getConnection();
 
@@ -228,6 +246,23 @@ class EquipoModel {
       `);
 
     return result.recordset;
+  }
+  static async obtenerPorImei(imei) {
+    if (!imei) return null;
+
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input("imei", sql.VarChar(20), imei)
+      .query(`
+        SELECT IDEQUIPO
+        FROM EQUIPO
+        WHERE IMEI = @imei
+          AND ESTADO = 1
+      `);
+
+    return result.recordset[0] || null;
   }
 }
 

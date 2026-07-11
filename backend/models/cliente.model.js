@@ -27,6 +27,125 @@ class ClienteModel {
     return result.recordset;
   }
 
+  static async obtenerPorCelular(celular) {
+  const pool = await getConnection();
+
+  const result = await pool
+    .request()
+    .input("celular", sql.VarChar(20), celular)
+    .query(`
+      SELECT
+        c.IDCLIENTE,
+        c.IDPERSONA,
+        c.ESTADO,
+        p.DNI,
+        p.NOMBRES,
+        p.APELLIDO_PATERNO,
+        p.APELLIDO_MATERNO,
+        p.CELULAR,
+        p.EMAIL,
+        p.DIRECCION
+      FROM CLIENTE c
+      INNER JOIN PERSONA p
+        ON c.IDPERSONA = p.IDPERSONA
+      WHERE p.CELULAR = @celular
+    `);
+
+  return result.recordset[0] || null;
+}
+
+static async crearDesdeReserva(datos) {
+  const pool = await getConnection();
+  const transaction = new sql.Transaction(pool);
+
+  try {
+    await transaction.begin();
+
+    const requestPersona = new sql.Request(transaction);
+
+    requestPersona.input(
+      "nombres",
+      sql.VarChar(100),
+      datos.nombres
+    );
+
+    requestPersona.input(
+      "apellidoPaterno",
+      sql.VarChar(100),
+      datos.apellidoPaterno
+    );
+
+    requestPersona.input(
+      "celular",
+      sql.VarChar(20),
+      datos.celular
+    );
+
+    requestPersona.input(
+      "email",
+      sql.VarChar(100),
+      datos.correo || null
+    );
+
+    const personaResult = await requestPersona.query(`
+      INSERT INTO PERSONA (
+        DNI,
+        NOMBRES,
+        APELLIDO_PATERNO,
+        APELLIDO_MATERNO,
+        CELULAR,
+        EMAIL,
+        DIRECCION
+      )
+      OUTPUT INSERTED.IDPERSONA
+      VALUES (
+        NULL,
+        @nombres,
+        @apellidoPaterno,
+        NULL,
+        @celular,
+        @email,
+        NULL
+      )
+    `);
+
+    const idPersona =
+      personaResult.recordset[0].IDPERSONA;
+
+    const requestCliente = new sql.Request(transaction);
+
+    requestCliente.input(
+      "idPersona",
+      sql.Int,
+      idPersona
+    );
+
+    const clienteResult = await requestCliente.query(`
+      INSERT INTO CLIENTE (
+        IDPERSONA
+      )
+      OUTPUT INSERTED.IDCLIENTE
+      VALUES (
+        @idPersona
+      )
+    `);
+
+    await transaction.commit();
+
+    return {
+      idCliente:
+        clienteResult.recordset[0].IDCLIENTE,
+      idPersona,
+    };
+  } catch (error) {
+    if (!transaction._aborted) {
+      await transaction.rollback();
+    }
+
+    throw error;
+  }
+}
+
   static async crear(datos) {
     const pool = await getConnection();
     const transaction = new sql.Transaction(pool);

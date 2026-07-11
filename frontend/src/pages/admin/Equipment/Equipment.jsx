@@ -117,7 +117,28 @@ function Equipment() {
   }
 
   async function manejarCambio(evento) {
-    const { name, value } = evento.target;
+    const { name } = evento.target;
+    let { value } = evento.target;
+
+    if (name === "imei") {
+      value = value.replace(/\D/g, "").slice(0, 15);
+    }
+
+    if (name === "numeroSerie") {
+      value = value
+        .replace(/[^a-zA-Z0-9ÁÉÍÓÚáéíóúÑñ\-_/]/g, "")
+        .slice(0, 50);
+    }
+
+    if (name === "color") {
+      value = value
+        .replace(/[^a-zA-ZÁÉÍÓÚáéíóúÑñüÜ\s-]/g, "")
+        .slice(0, 30);
+    }
+
+    if (name === "observaciones") {
+      value = value.slice(0, 500);
+    }
 
     setFormulario((anterior) => ({
       ...anterior,
@@ -132,7 +153,9 @@ function Equipment() {
       }));
 
       if (value) {
-        const datosModelos = await obtenerModelosPorMarca(value);
+        const datosModelos =
+          await obtenerModelosPorMarca(value);
+
         setModelos(datosModelos);
       } else {
         setModelos([]);
@@ -142,7 +165,60 @@ function Equipment() {
 
   async function manejarGuardar(evento) {
     evento.preventDefault();
+    if (!formulario.idCliente) {
+  throw new Error("Selecciona un cliente");
+  }
 
+  if (!formulario.idMarca) {
+    throw new Error("Selecciona una marca");
+  }
+
+  if (!formulario.idModelo) {
+    throw new Error("Selecciona un modelo");
+  }
+
+  if (
+    !["Celular", "Tablet"].includes(
+      formulario.tipoDispositivo
+    )
+  ) {
+    throw new Error("El tipo de dispositivo no es válido");
+  }
+
+  if (
+    formulario.imei &&
+    !/^\d{15}$/.test(formulario.imei)
+  ) {
+    throw new Error(
+      "El IMEI debe contener exactamente 15 números"
+    );
+  }
+
+  if (
+    formulario.numeroSerie &&
+    formulario.numeroSerie.length > 50
+  ) {
+    throw new Error(
+      "El número de serie no puede superar los 50 caracteres"
+    );
+  }
+
+  if (
+    formulario.color &&
+    !/^[a-zA-ZÁÉÍÓÚáéíóúÑñüÜ\s-]{2,30}$/.test(
+      formulario.color
+    )
+  ) {
+    throw new Error(
+      "El color debe contener solo letras y tener entre 2 y 30 caracteres"
+    );
+  }
+
+  if (formulario.observaciones.length > 500) {
+    throw new Error(
+      "Las observaciones no pueden superar los 500 caracteres"
+    );
+  }
     try {
       setGuardando(true);
       setError("");
@@ -150,6 +226,7 @@ function Equipment() {
       const datos = {
         ...formulario,
         idCliente: Number(formulario.idCliente),
+        idMarca: Number(formulario.idMarca),
         idModelo: Number(formulario.idModelo),
       };
 
@@ -415,6 +492,9 @@ function Equipment() {
                 name="imei"
                 value={formulario.imei}
                 onChange={manejarCambio}
+                inputMode="numeric"
+                maxLength={15}
+                placeholder="15 dígitos"
               />
 
               <Campo
@@ -422,6 +502,8 @@ function Equipment() {
                 name="numeroSerie"
                 value={formulario.numeroSerie}
                 onChange={manejarCambio}
+                maxLength={50}
+                placeholder="Máximo 50 caracteres"
               />
 
               <Campo
@@ -429,6 +511,8 @@ function Equipment() {
                 name="color"
                 value={formulario.color}
                 onChange={manejarCambio}
+                maxLength={30}
+                placeholder="Ejemplo: Negro"
               />
 
               <div className="md:col-span-2">
@@ -442,6 +526,7 @@ function Equipment() {
                     value={formulario.observaciones}
                     onChange={manejarCambio}
                     rows="4"
+                    maxLength={500}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-red-600"
                   />
                 </label>
@@ -485,7 +570,15 @@ function Equipment() {
   );
 }
 
-function Campo({ label, name, value, onChange }) {
+function Campo({
+  label,
+  name,
+  value,
+  onChange,
+  maxLength,
+  inputMode,
+  placeholder,
+}) {
   return (
     <label>
       <span className="mb-2 block text-sm font-semibold">
@@ -496,8 +589,18 @@ function Campo({ label, name, value, onChange }) {
         name={name}
         value={value}
         onChange={onChange}
+        maxLength={maxLength}
+        inputMode={inputMode}
+        placeholder={placeholder}
+        autoComplete="off"
         className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-red-600"
       />
+
+      {maxLength && (
+        <p className="mt-1 text-right text-xs text-gray-500">
+          {value.length}/{maxLength}
+        </p>
+      )}
     </label>
   );
 }

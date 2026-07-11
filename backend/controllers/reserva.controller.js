@@ -1,4 +1,5 @@
 const ReservaModel = require("../models/reserva.model");
+const ClienteModel = require("../models/cliente.model");
 
 class ReservaController {
   static async obtenerTodas(req, res) {
@@ -48,70 +49,135 @@ class ReservaController {
   
 
   static async crear(req, res) {
-    try {
-      const {
-        nombreCliente,
-        celular,
-        servicio,
-        fechaReserva,
-        horaReserva,
-      } = req.body;
-      
-      const fechaSeleccionada = new Date(
-        `${fechaReserva}T${horaReserva}`
-      );
+  try {
+    const {
+      nombres,
+      apellidoPaterno,
+      nombreCliente,
+      celular,
+      correo,
+      servicio,
+      descripcion,
+      fechaReserva,
+      horaReserva,
+      observaciones,
+    } = req.body;
 
-      if (Number.isNaN(fechaSeleccionada.getTime())) {
-        return res.status(400).json({
-          ok: false,
-          message: "La fecha u hora no es válida",
-        });
-      }
-
-      if (fechaSeleccionada < new Date()) {
-        return res.status(400).json({
-          ok: false,
-          message: "No puedes reservar una fecha pasada",
-        });
-      }
-      const hora = horaReserva.substring(0, 5);
-
-      if (hora < "10:00" || hora > "21:00") {
-        return res.status(400).json({
-          ok: false,
-          message:
-            "El horario de atención es de 10:00 a. m. a 9:00 p. m.",
-        });
-      }
-      
-      if (
-        !nombreCliente ||
-        !celular ||
-        !servicio ||
-        !fechaReserva ||
-        !horaReserva
-      ) {
-        return res.status(400).json({
-          ok: false,
-          message: "Completa los campos obligatorios",
-        });
-      }
-
-      const reserva = await ReservaModel.crear(req.body);
-
-      return res.status(201).json({
-        ok: true,
-        message: "Reserva registrada correctamente",
-        data: reserva,
-      });
-    } catch (error) {
-      return res.status(500).json({
+    if (
+      !nombres ||
+      !apellidoPaterno ||
+      !celular ||
+      !servicio ||
+      !fechaReserva ||
+      !horaReserva
+    ) {
+      return res.status(400).json({
         ok: false,
-        message: "No se pudo registrar la reserva",
-        error: error.message,
+        message: "Completa los campos obligatorios",
       });
     }
+
+    if (!/^\d{9}$/.test(celular)) {
+      return res.status(400).json({
+        ok: false,
+        message: "El celular debe contener exactamente 9 números",
+      });
+    }
+
+    const hora = String(horaReserva).substring(0, 5);
+
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)) {
+      return res.status(400).json({
+        ok: false,
+        message: "La hora ingresada no es válida",
+      });
+    }
+
+    if (hora < "10:00" || hora > "21:00") {
+      return res.status(400).json({
+        ok: false,
+        message:
+          "El horario de atención es de 10:00 a. m. a 9:00 p. m.",
+      });
+    }
+
+    const fechaSeleccionada = new Date(
+      `${fechaReserva}T${hora}:00`
+    );
+
+    if (Number.isNaN(fechaSeleccionada.getTime())) {
+      return res.status(400).json({
+        ok: false,
+        message: "La fecha u hora no es válida",
+      });
+    }
+
+    if (fechaSeleccionada < new Date()) {
+      return res.status(400).json({
+        ok: false,
+        message: "No puedes reservar una fecha pasada",
+      });
+    }
+
+    // Buscar al cliente por su número de celular
+    let cliente = await ClienteModel.obtenerPorCelular(celular);
+
+    let idCliente;
+
+    if (cliente) {
+      idCliente = cliente.IDCLIENTE;
+    } else {
+      const nuevoCliente =
+        await ClienteModel.crearDesdeReserva({
+          nombres: nombres.trim(),
+          apellidoPaterno: apellidoPaterno.trim(),
+          celular,
+          correo: correo || null,
+        });
+
+      idCliente = nuevoCliente.idCliente;
+    }
+
+    const nombreCompleto =
+      nombreCliente?.trim() ||
+      `${nombres} ${apellidoPaterno}`.trim();
+
+    const reserva = await ReservaModel.crear({
+      idCliente,
+      nombreCliente: nombreCompleto,
+      celular,
+      correo: correo || null,
+      servicio,
+      descripcion: descripcion || null,
+      fechaReserva,
+      horaReserva: hora,
+      observaciones: observaciones || null,
+    });
+
+    return res.status(201).json({
+      ok: true,
+      message: cliente
+        ? "Reserva registrada para un cliente existente"
+        : "Reserva registrada y cliente creado automáticamente",
+      data: {
+        ...reserva,
+        idCliente,
+        clienteNuevo: !cliente,
+      },
+    });
+  } catch (error) {
+    console.error(
+      "Error al registrar reserva y cliente:",
+      error
+    );
+
+    return res.status(500).json({
+      ok: false,
+      message: "No se pudo registrar la reserva",
+      error: error.message,
+    });
   }
+}
 
   static async actualizar(req, res) {
     try {

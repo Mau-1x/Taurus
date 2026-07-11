@@ -16,7 +16,8 @@ import {
 import { crearReserva } from "../../services/reservaService";
 
 const formularioInicial = {
-  nombreCliente: "",
+  nombres: "",
+  apellidoPaterno: "",
   celular: "",
   correo: "",
   servicio: "",
@@ -81,10 +82,10 @@ function Reservations() {
 
       await crearReserva({
         ...formulario,
+        nombreCliente: `${formulario.nombres} ${formulario.apellidoPaterno}`.trim(),
         correo: formulario.correo || null,
         descripcion: formulario.descripcion || null,
-        observaciones:
-          formulario.observaciones || null,
+        observaciones: formulario.observaciones || null,
       });
 
       setMensaje(
@@ -128,9 +129,18 @@ function Reservations() {
           >
             <Campo
               icono={User}
-              label="Nombre completo"
-              name="nombreCliente"
-              value={formulario.nombreCliente}
+              label="Nombres"
+              name="nombres"
+              value={formulario.nombres}
+              onChange={manejarCambio}
+              required
+            />
+
+            <Campo
+              icono={User}
+              label="Apellido paterno"
+              name="apellidoPaterno"
+              value={formulario.apellidoPaterno}
               onChange={manejarCambio}
               required
             />
