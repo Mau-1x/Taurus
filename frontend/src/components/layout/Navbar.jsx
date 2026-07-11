@@ -1,88 +1,157 @@
-import { Menu, ShoppingCart, User } from "lucide-react";
-import logo from "../../assets/logos/taurus-logo.png";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, NavLink } from "react-router-dom";
+import {
+  Menu,
+  X,
+  Wrench,
+  ShoppingBag,
+  CalendarDays,
+  Search,
+  Home,
+  MessageCircle,
+} from "lucide-react";
+
+const enlaces = [
+  {
+    nombre: "Inicio",
+    ruta: "/",
+    icono: Home,
+  },
+  {
+    nombre: "Servicios",
+    ruta: "/servicios",
+    icono: Wrench,
+  },
+  {
+    nombre: "Productos",
+    ruta: "/productos",
+    icono: ShoppingBag,
+  },
+  {
+    nombre: "Reservas",
+    ruta: "/reservas",
+    icono: CalendarDays,
+  },
+  {
+    nombre: "Seguimiento",
+    ruta: "/seguimiento",
+    icono: Search,
+  },
+  {
+    nombre: "Contacto",
+    ruta: "/contacto",
+    icono: MessageCircle,
+  },
+];
 
 function Navbar() {
-  return (
-    <header className="sticky top-0 z-50 bg-black text-white shadow-lg">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
-        {/* Logo */}
-        <div className="flex items-center gap-3 cursor-pointer">
-          <img
-            src={logo}
-            alt="Taurus"
-            className="h-12 w-12 rounded-full"
-          />
+  function cerrarMenu() {
+    setMenuAbierto(false);
+  }
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-black/95 text-white backdrop-blur">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
+        <Link
+          to="/"
+          onClick={cerrarMenu}
+          className="flex items-center gap-3"
+        >
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-700">
+            <Wrench size={24} />
+          </div>
 
           <div>
-            <h1 className="text-xl font-bold text-red-600">
+            <p className="text-xl font-bold text-white">
               Taurus
-            </h1>
+            </p>
 
-            <p className="text-xs text-gray-300">
-              Servicio Técnico Especializado
+            <p className="text-xs text-gray-400">
+              Servicio técnico
             </p>
           </div>
-        </div>
+        </Link>
 
-        {/* Menú Desktop */}
-        <nav className="hidden lg:flex items-center gap-8">
-
-          <Link to="/inicio">Inicio</Link>
-
-          <Link to="servicios/">Servicios</Link>
-
-          <Link
-            to="/productos"
-            className="hover:text-red-500 transition"
-          >
-            Productos
-          </Link>
-
-          <Link to="/reservas">
-            Reservas
-          </Link>
-          
-          <Link
-            to="/seguimiento"
-            className="transition hover:text-red-500"
-          >
-            Seguimiento
-          </Link>
-          
-          <Link to="/contacto">Contacto</Link>
-
+        <nav className="hidden items-center gap-1 lg:flex">
+          {enlaces.map((enlace) => (
+            <NavLink
+              key={enlace.ruta}
+              to={enlace.ruta}
+              className={({ isActive }) =>
+                `rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                  isActive
+                    ? "bg-red-700 text-white"
+                    : "text-gray-300 hover:bg-white/10 hover:text-white"
+                }`
+              }
+            >
+              {enlace.nombre}
+            </NavLink>
+          ))}
         </nav>
 
-        {/* Acciones */}
-        <div className="hidden lg:flex items-center gap-5">
-
-          <ShoppingCart className="cursor-pointer hover:text-red-500 transition" />
-
-          <User className="cursor-pointer hover:text-red-500 transition" />
-
-          <a
-            href="https://wa.me/51999999999"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-lg bg-green-600 px-5 py-2 font-semibold hover:bg-green-700 transition"
+        <div className="hidden lg:block">
+          <Link
+            to="/login"
+            className="rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold transition hover:border-red-600 hover:bg-red-700"
           >
-            WhatsApp
-          </a>
-
-          <button className="rounded-lg bg-red-700 px-5 py-2 font-semibold hover:bg-red-800 transition">
-            Iniciar sesión
-          </button>
-
+            Acceso administrativo
+          </Link>
         </div>
 
-        {/* Menú móvil */}
-        <button className="lg:hidden">
-          <Menu size={30} />
+        <button
+          type="button"
+          onClick={() => setMenuAbierto((estado) => !estado)}
+          aria-label={
+            menuAbierto ? "Cerrar menú" : "Abrir menú"
+          }
+          className="rounded-xl border border-white/15 p-3 text-white transition hover:bg-white/10 lg:hidden"
+        >
+          {menuAbierto ? (
+            <X size={24} />
+          ) : (
+            <Menu size={24} />
+          )}
         </button>
-
       </div>
+
+      {menuAbierto && (
+        <div className="border-t border-white/10 bg-black px-6 pb-6 pt-4 lg:hidden">
+          <nav className="space-y-2">
+            {enlaces.map((enlace) => {
+              const Icono = enlace.icono;
+
+              return (
+                <NavLink
+                  key={enlace.ruta}
+                  to={enlace.ruta}
+                  onClick={cerrarMenu}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 rounded-xl px-4 py-3 font-semibold transition ${
+                      isActive
+                        ? "bg-red-700 text-white"
+                        : "text-gray-300 hover:bg-white/10 hover:text-white"
+                    }`
+                  }
+                >
+                  <Icono size={20} />
+                  {enlace.nombre}
+                </NavLink>
+              );
+            })}
+          </nav>
+
+          <Link
+            to="/login"
+            onClick={cerrarMenu}
+            className="mt-5 block rounded-xl border border-white/20 px-5 py-3 text-center font-semibold transition hover:bg-red-700"
+          >
+            Acceso administrativo
+          </Link>
+        </div>
+      )}
     </header>
   );
 }

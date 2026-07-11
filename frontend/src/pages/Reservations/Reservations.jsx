@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   CalendarDays,
   Clock,
@@ -28,6 +29,19 @@ const formularioInicial = {
 function Reservations() {
   const [formulario, setFormulario] =
     useState(formularioInicial);
+
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const servicio = searchParams.get("servicio");
+
+    if (servicio) {
+      setFormulario((anterior) => ({
+        ...anterior,
+        servicio,
+      }));
+    }
+  }, [searchParams]);
 
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState("");
