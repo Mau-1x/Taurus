@@ -9,6 +9,10 @@ import Tracking from "../pages/Tracking/Tracking";
 
 import Dashboard from "../pages/admin/Dashboard/Dashboard";
 import Clients from "../pages/admin/Clients/Clients";
+import Equipment from "../pages/admin/Equipment/Equipment";
+import Repairs from "../pages/admin/Repairs/Repairs";
+import Inventory from "../pages/admin/Inventory/Inventory";
+import Sales from "../pages/admin/Sales/Sales";
 
 function AppRouter() {
   return (
@@ -26,6 +30,10 @@ function AppRouter() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="clientes" element={<Clients />} />
+          <Route path="equipos" element={<Equipment />} />
+          <Route path="reparaciones" element={<Repairs />} />
+          <Route path="inventario" element={<Inventory />} />
+          <Route path="ventas" element={<Sales />} />
         </Route>
       </Routes>
     </BrowserRouter>

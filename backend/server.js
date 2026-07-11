@@ -7,6 +7,8 @@ const clienteRoutes = require("./routes/cliente.routes");
 const equipoRoutes = require("./routes/equipo.routes");
 const reparacionRoutes = require("./routes/reparacion.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
+const productoRoutes = require("./routes/producto.routes");
+const ventaRoutes = require("./routes/venta.routes");
 
 const app = express();
 
@@ -17,6 +19,8 @@ app.use("/api/clientes", clienteRoutes);
 app.use("/api/equipos", equipoRoutes);
 app.use("/api/reparaciones", reparacionRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/productos", productoRoutes);
+app.use("/api/ventas", ventaRoutes);
 
 const PORT = process.env.PORT || 3000;
 
