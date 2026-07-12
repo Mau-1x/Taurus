@@ -64,6 +64,17 @@ class ReservaController {
     } = req.body;
 
     if (
+      correo &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo.trim())
+    ) {
+      return res.status(400).json({
+        ok: false,
+        message:
+          "Ingresa un correo válido, por ejemplo: nombre@gmail.com",
+      });
+    }
+
+    if (
       !nombres ||
       !apellidoPaterno ||
       !celular ||
@@ -77,6 +88,7 @@ class ReservaController {
       });
     }
 
+    
     if (!/^\d{9}$/.test(celular)) {
       return res.status(400).json({
         ok: false,
