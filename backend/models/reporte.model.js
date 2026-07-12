@@ -179,6 +179,135 @@ class ReporteModel {
 
     return result.recordset;
   }
+    static async obtenerComprobanteReparacion(idReparacion) {
+    const pool = await getConnection();
+
+    const resultado = await pool
+      .request()
+      .input("idReparacion", idReparacion)
+      .query(`
+        SELECT
+          r.IDREPARACION,
+          r.CODIGO,
+          r.FALLA_REPORTADA,
+          r.DIAGNOSTICO,
+          r.SOLUCION,
+          r.COSTO_ESTIMADO,
+          r.COSTO_FINAL,
+          r.FECHA_INGRESO,
+          r.FECHA_ESTIMADA,
+          r.FECHA_ENTREGA,
+          r.GARANTIA_DIAS,
+          r.OBSERVACIONES,
+
+          er.NOMBRE AS ESTADO_REPARACION,
+
+          ma.NOMBRE AS MARCA,
+          mo.NOMBRE AS MODELO,
+          e.IMEI,
+
+          p.DNI,
+          p.CELULAR,
+          p.EMAIL,
+          p.DIRECCION,
+
+          CONCAT(
+            p.NOMBRES,
+            ' ',
+            p.APELLIDO_PATERNO,
+            ' ',
+            ISNULL(p.APELLIDO_MATERNO, '')
+          ) AS CLIENTE,
+
+          ISNULL(u.NOMBRE, 'Sin técnico asignado') AS TECNICO
+
+        FROM REPARACION r
+
+        INNER JOIN ESTADO_REPARACION er
+          ON r.IDESTADO = er.IDESTADO
+
+        INNER JOIN EQUIPO e
+          ON r.IDEQUIPO = e.IDEQUIPO
+
+        INNER JOIN MODELO mo
+          ON e.IDMODELO = mo.IDMODELO
+
+        INNER JOIN MARCA ma
+          ON mo.IDMARCA = ma.IDMARCA
+
+        INNER JOIN CLIENTE c
+          ON e.IDCLIENTE = c.IDCLIENTE
+
+        INNER JOIN PERSONA p
+          ON c.IDPERSONA = p.IDPERSONA
+
+        LEFT JOIN USUARIO u
+          ON r.IDTECNICO = u.IDUSUARIO
+
+        WHERE r.IDREPARACION = @idReparacion
+          AND r.ESTADO = 1
+      `);
+
+    return resultado.recordset[0] || null;
+  }
+
+  static async obtenerRepuestosComprobante(idReparacion) {
+    const pool = await getConnection();
+
+    const resultado = await pool
+      .request()
+      .input("idReparacion", idReparacion)
+      .query(`
+        SELECT
+          p.CODIGO,
+          p.NOMBRE AS PRODUCTO,
+          drp.CANTIDAD,
+          drp.PRECIO_UNITARIO,
+          CAST(
+            drp.CANTIDAD * drp.PRECIO_UNITARIO
+            AS DECIMAL(10,2)
+          ) AS SUBTOTAL
+        FROM DETALLE_REPARACION_PRODUCTO drp
+
+        INNER JOIN PRODUCTO p
+          ON drp.IDPRODUCTO = p.IDPRODUCTO
+
+        WHERE drp.IDREPARACION = @idReparacion
+          AND drp.ESTADO = 1
+
+        ORDER BY drp.IDDETALLE_REPARACION_PRODUCTO
+      `);
+
+    return resultado.recordset;
+  }
+
+  static async obtenerPagosComprobante(idReparacion) {
+    const pool = await getConnection();
+
+    const resultado = await pool
+      .request()
+      .input("idReparacion", idReparacion)
+      .query(`
+        SELECT
+          pr.IDPAGO,
+          pr.MONTO,
+          pr.METODO_PAGO,
+          pr.OBSERVACIONES,
+          pr.FECHA_PAGO,
+          u.NOMBRE AS USUARIO
+        FROM PAGO_REPARACION pr
+
+        INNER JOIN USUARIO u
+          ON pr.IDUSUARIO = u.IDUSUARIO
+
+        WHERE pr.IDREPARACION = @idReparacion
+          AND pr.ESTADO = 1
+
+        ORDER BY pr.FECHA_PAGO
+      `);
+
+    return resultado.recordset;
+  }
 }
 
 module.exports = ReporteModel;

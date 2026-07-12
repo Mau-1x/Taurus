@@ -22,3 +22,39 @@ export async function obtenerReporteGeneral() {
 
   return resultado.data;
 }
+
+export async function descargarComprobanteReparacion(
+  idReparacion,
+  codigo
+) {
+  const respuesta = await apiFetch(
+    `${API_URL}/reparaciones/${idReparacion}/pdf`
+  );
+
+  if (!respuesta.ok) {
+    let mensaje = "No se pudo descargar el comprobante";
+
+    try {
+      const resultado = await respuesta.json();
+      mensaje = resultado.message || mensaje;
+    } catch {
+      // La respuesta no era JSON
+    }
+
+    throw new Error(mensaje);
+  }
+
+  const archivo = await respuesta.blob();
+  const url = URL.createObjectURL(archivo);
+
+  const enlace = document.createElement("a");
+
+  enlace.href = url;
+  enlace.download = `comprobante-${codigo}.pdf`;
+
+  document.body.appendChild(enlace);
+  enlace.click();
+  enlace.remove();
+
+  URL.revokeObjectURL(url);
+}

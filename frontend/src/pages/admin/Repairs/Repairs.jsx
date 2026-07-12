@@ -12,10 +12,14 @@ import {
   Boxes,
   Wallet,
   CircleDollarSign,
+  FileDown,
 } from "lucide-react";
 
 import { obtenerProductos } from "../../../services/productoService";
 import { obtenerEquipos } from "../../../services/equipoService";
+import {
+  descargarComprobanteReparacion,
+} from "../../../services/reporteService";
 
 import {
   obtenerReparaciones,
@@ -108,9 +112,13 @@ function Repairs() {
   const [comentarioEstado, setComentarioEstado] =
     useState("");
 
+  const [descargandoPdf, setDescargandoPdf] =
+    useState(null);
+
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+
 
   useEffect(() => {
     cargarDatos();
@@ -622,6 +630,22 @@ async function guardarPago(evento) {
     }
   }
 
+    async function descargarPdf(reparacion) {
+    try {
+      setDescargandoPdf(reparacion.IDREPARACION);
+      setError("");
+
+      await descargarComprobanteReparacion(
+        reparacion.IDREPARACION,
+        reparacion.CODIGO
+      );
+    } catch (errorDescarga) {
+      setError(errorDescarga.message);
+    } finally {
+      setDescargandoPdf(null);
+    }
+  }
+
   return (
     <section>
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -759,7 +783,24 @@ async function guardarPago(evento) {
 
                     <td className="py-4">
                       <div className="flex justify-end gap-2">
-                          <button
+                        <button
+                          onClick={() => descargarPdf(reparacion)}
+                          disabled={
+                            descargandoPdf === reparacion.IDREPARACION
+                          }
+                          title="Descargar comprobante PDF"
+                          className="rounded-lg bg-red-50 p-2 text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {descargandoPdf === reparacion.IDREPARACION ? (
+                            <LoaderCircle
+                              size={18}
+                              className="animate-spin"
+                            />
+                          ) : (
+                            <FileDown size={18} />
+                          )}
+                        </button>
+                        <button
                           onClick={() => abrirPagos(reparacion)}
                           title="Administrar pagos"
                           className="rounded-lg bg-purple-50 p-2 text-purple-700 hover:bg-purple-100"

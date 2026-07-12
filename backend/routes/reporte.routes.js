@@ -11,13 +11,17 @@ const {
 
 const router = express.Router();
 
-router.use(
-  verificarToken,
-  permitirRoles("ADMINISTRADOR")
+router.use(verificarToken);
+
+router.get(
+  "/reparaciones/:id/pdf",
+  permitirRoles("ADMINISTRADOR", "TECNICO"),
+  ReporteController.descargarComprobanteReparacion
 );
 
 router.get(
   "/",
+  permitirRoles("ADMINISTRADOR"),
   ReporteController.obtenerReporteGeneral
 );
 
