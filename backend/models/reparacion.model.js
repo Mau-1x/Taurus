@@ -127,6 +127,38 @@ class ReparacionModel {
     return result.recordset[0] || null;
   }
 
+  static async obtenerEstadoPorId(idEstado) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input("idEstado", sql.Int, idEstado)
+      .query(`
+        SELECT IDESTADO, NOMBRE, ORDEN
+        FROM ESTADO_REPARACION
+        WHERE IDESTADO = @idEstado
+          AND ESTADO = 1
+      `);
+
+    return result.recordset[0] || null;
+  }
+
+  static async equipoExiste(idEquipo) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input("idEquipo", sql.Int, idEquipo)
+      .query(`
+        SELECT IDEQUIPO
+        FROM EQUIPO
+        WHERE IDEQUIPO = @idEquipo
+          AND ESTADO = 1
+      `);
+
+    return result.recordset.length > 0;
+  }
+
   static async crear(datos) {
     const pool = await getConnection();
     const transaction = new sql.Transaction(pool);

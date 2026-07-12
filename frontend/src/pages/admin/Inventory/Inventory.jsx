@@ -176,7 +176,43 @@ function Inventory() {
   }
 
   async function manejarCambio(evento) {
-    const { name, value } = evento.target;
+    const { name } = evento.target;
+    let { value } = evento.target;
+
+    if (name === "codigo") {
+      value = value
+        .replace(/[^a-zA-Z0-9_-]/g, "")
+        .toUpperCase()
+        .slice(0, 30);
+    }
+
+    if (name === "nombre") {
+      value = value.slice(0, 150);
+    }
+
+    if (name === "descripcion") {
+      value = value.slice(0, 500);
+    }
+
+    if (name === "imagen") {
+      value = value.slice(0, 500);
+    }
+
+    if (
+      name === "precioCompra" ||
+      name === "precioVenta"
+    ) {
+      if (!/^\d{0,8}(\.\d{0,2})?$/.test(value)) {
+        return;
+      }
+    }
+
+    if (
+      name === "stock" ||
+      name === "stockMinimo"
+    ) {
+      value = value.replace(/\D/g, "").slice(0, 6);
+    }
 
     setFormulario((anterior) => ({
       ...anterior,
@@ -207,6 +243,106 @@ function Inventory() {
     try {
       setGuardando(true);
       setError("");
+
+      if (!formulario.idCategoria) {
+        throw new Error("Selecciona una categoría");
+      }
+
+      if (
+        !/^[A-Za-z0-9_-]{2,30}$/.test(
+          formulario.codigo.trim()
+        )
+      ) {
+        throw new Error(
+          "El código debe tener entre 2 y 30 caracteres"
+        );
+      }
+
+      if (
+        formulario.nombre.trim().length < 2 ||
+        formulario.nombre.trim().length > 150
+      ) {
+        throw new Error(
+          "El nombre debe tener entre 2 y 150 caracteres"
+        );
+      }
+
+      if (formulario.descripcion.length > 500) {
+        throw new Error(
+          "La descripción no puede superar los 500 caracteres"
+        );
+      }
+
+      const precioCompra = Number(
+        formulario.precioCompra
+      );
+
+      const precioVenta = Number(
+        formulario.precioVenta
+      );
+
+      if (
+        !Number.isFinite(precioCompra) ||
+        precioCompra < 0
+      ) {
+        throw new Error(
+          "El precio de compra no es válido"
+        );
+      }
+
+      if (
+        !Number.isFinite(precioVenta) ||
+        precioVenta < 0
+      ) {
+        throw new Error(
+          "El precio de venta no es válido"
+        );
+      }
+
+      if (precioVenta < precioCompra) {
+        throw new Error(
+          "El precio de venta no puede ser menor al precio de compra"
+        );
+      }
+
+      if (
+        !productoEditando &&
+        (!Number.isInteger(Number(formulario.stock)) ||
+          Number(formulario.stock) < 0)
+      ) {
+        throw new Error(
+          "El stock inicial debe ser un número entero mayor o igual a cero"
+        );
+      }
+
+      if (
+        !Number.isInteger(
+          Number(formulario.stockMinimo)
+        ) ||
+        Number(formulario.stockMinimo) < 0
+      ) {
+        throw new Error(
+          "El stock mínimo debe ser un número entero mayor o igual a cero"
+        );
+      }
+
+      if (
+        formulario.idModelo &&
+        !formulario.idMarca
+      ) {
+        throw new Error(
+          "Debes seleccionar una marca antes del modelo"
+        );
+      }
+
+      if (
+        formulario.imagen &&
+        !/^https?:\/\/.+/i.test(formulario.imagen)
+      ) {
+        throw new Error(
+          "La URL de la imagen debe comenzar con http:// o https://"
+        );
+      }
 
       const datos = {
         ...formulario,
@@ -281,6 +417,48 @@ function Inventory() {
     try {
       setGuardando(true);
       setError("");
+
+      const cantidad = Number(movimiento.cantidad);
+
+      if (
+        !Number.isInteger(cantidad) ||
+        cantidad < 0 ||
+        cantidad > 999999
+      ) {
+        throw new Error(
+          "La cantidad debe ser un número entero entre 0 y 999999"
+        );
+      }
+
+      if (
+        movimiento.tipo !== "AJUSTE" &&
+        cantidad === 0
+      ) {
+        throw new Error(
+          "La cantidad debe ser mayor que cero"
+        );
+      }
+
+      if (
+        movimiento.tipo === "SALIDA" &&
+        cantidad > Number(productoStock.STOCK)
+      ) {
+        throw new Error(
+          "La salida no puede superar el stock disponible"
+        );
+      }
+
+      if (movimiento.motivo.trim().length < 3) {
+        throw new Error(
+          "Indica un motivo de al menos 3 caracteres"
+        );
+      }
+
+      if (movimiento.motivo.length > 300) {
+        throw new Error(
+          "El motivo no puede superar los 300 caracteres"
+        );
+      }
 
       await moverStock(productoStock.IDPRODUCTO, {
         tipo: movimiento.tipo,
@@ -706,6 +884,8 @@ function ModalProducto({
             name="codigo"
             value={formulario.codigo}
             onChange={manejarCambio}
+            maxLength={30}
+            placeholder="Ejemplo: BAT-SAM-A15"
             required
           />
 
@@ -714,6 +894,31 @@ function ModalProducto({
             name="nombre"
             value={formulario.nombre}
             onChange={manejarCambio}
+            maxLength={150}
+            required
+          />
+
+          <Campo
+            label="Precio de compra"
+            name="precioCompra"
+            type="number"
+            value={formulario.precioCompra}
+            onChange={manejarCambio}
+            min="0"
+            max="99999999.99"
+            step="0.01"
+            required
+          />
+
+          <Campo
+            label="Precio de venta"
+            name="precioVenta"
+            type="number"
+            value={formulario.precioVenta}
+            onChange={manejarCambio}
+            min="0"
+            max="99999999.99"
+            step="0.01"
             required
           />
 
@@ -770,13 +975,16 @@ function ModalProducto({
           />
 
           {!editando && (
-            <Campo
-              label="Stock inicial"
-              name="stock"
-              type="number"
-              value={formulario.stock}
-              onChange={manejarCambio}
-            />
+          <Campo
+            label="Stock inicial"
+            name="stock"
+            type="number"
+            value={formulario.stock}
+            onChange={manejarCambio}
+            min="0"
+            max="999999"
+            step="1"
+          />
           )}
 
           <Campo
@@ -785,6 +993,9 @@ function ModalProducto({
             type="number"
             value={formulario.stockMinimo}
             onChange={manejarCambio}
+            min="0"
+            max="999999"
+            step="1"
           />
 
           <Campo
@@ -792,11 +1003,16 @@ function ModalProducto({
             name="imagen"
             value={formulario.imagen}
             onChange={manejarCambio}
+            maxLength={500}
+            placeholder="https://..."
           />
 
           <label className="md:col-span-2">
             <span className="mb-2 block text-sm font-semibold">
               Descripción
+              <p className="mt-1 text-right text-xs text-gray-500">
+                {formulario.descripcion.length}/500
+              </p>
             </span>
 
             <textarea
@@ -804,7 +1020,9 @@ function ModalProducto({
               value={formulario.descripcion}
               onChange={manejarCambio}
               rows="4"
+              maxLength={500}
               className="w-full rounded-xl border border-gray-300 px-4 py-3"
+              
             />
           </label>
 
@@ -917,8 +1135,13 @@ function ModalStock({
             }
             rows="3"
             className="w-full rounded-xl border border-gray-300 px-4 py-3"
+            maxLength={300}
+            required
           />
         </label>
+        <p className="mt-1 text-right text-xs text-gray-500">
+          {movimiento.motivo.length}/300
+        </p>
 
         {error && (
           <div className="mt-5 rounded-xl bg-red-50 p-4 text-red-700">
@@ -1044,11 +1267,19 @@ function Campo({
   value,
   onChange,
   required = false,
+  min,
+  max,
+  step,
+  maxLength,
+  placeholder,
 }) {
   return (
     <label>
       <span className="mb-2 block text-sm font-semibold">
         {label}
+        {required && (
+          <span className="text-red-600"> *</span>
+        )}
       </span>
 
       <input
@@ -1057,8 +1288,12 @@ function Campo({
         value={value}
         onChange={onChange}
         required={required}
-        min={type === "number" ? "0" : undefined}
-        step={type === "number" ? "0.01" : undefined}
+        min={min}
+        max={max}
+        step={step}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        autoComplete="off"
         className="w-full rounded-xl border border-gray-300 px-4 py-3"
       />
     </label>

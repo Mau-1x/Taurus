@@ -13,19 +13,19 @@ async function procesarRespuesta(respuesta) {
 }
 
 export async function obtenerProductos() {
-  const respuesta = await fetch(API_URL);
+  const respuesta = await apiFetch(API_URL);
   const resultado = await procesarRespuesta(respuesta);
   return resultado.data;
 }
 
 export async function obtenerCategorias() {
-  const respuesta = await fetch(`${API_URL}/categorias`);
+  const respuesta = await apiFetch(`${API_URL}/categorias`);
   const resultado = await procesarRespuesta(respuesta);
   return resultado.data;
 }
 
 export async function crearProducto(datos) {
-  const respuesta = await fetch(API_URL, {
+  const respuesta = await apiFetch(API_URL, {
     method: "POST",
     body: JSON.stringify(datos),
   });
@@ -34,7 +34,7 @@ export async function crearProducto(datos) {
 }
 
 export async function actualizarProducto(idProducto, datos) {
-  const respuesta = await fetch(`${API_URL}/${idProducto}`, {
+  const respuesta = await apiFetch(`${API_URL}/${idProducto}`, {
     method: "PUT",
     body: JSON.stringify(datos),
   });
@@ -43,7 +43,7 @@ export async function actualizarProducto(idProducto, datos) {
 }
 
 export async function eliminarProducto(idProducto) {
-  const respuesta = await fetch(`${API_URL}/${idProducto}`, {
+  const respuesta = await apiFetch(`${API_URL}/${idProducto}`, {
     method: "DELETE",
   });
 
@@ -51,7 +51,7 @@ export async function eliminarProducto(idProducto) {
 }
 
 export async function moverStock(idProducto, datos) {
-  const respuesta = await fetch(`${API_URL}/${idProducto}/stock`, {
+  const respuesta = await apiFetch(`${API_URL}/${idProducto}/stock`, {
     method: "PATCH",
     body: JSON.stringify(datos),
   });
@@ -60,7 +60,7 @@ export async function moverStock(idProducto, datos) {
 }
 
 export async function obtenerMovimientos(idProducto) {
-  const respuesta = await fetch(
+  const respuesta = await apiFetch(
     `${API_URL}/${idProducto}/movimientos`
   );
 

@@ -146,7 +146,30 @@ function Repairs() {
   }
 
   function manejarCambio(evento) {
-    const { name, value } = evento.target;
+    const { name } = evento.target;
+    let { value } = evento.target;
+
+    if (
+      name === "fallaReportada" ||
+      name === "diagnostico" ||
+      name === "solucion" ||
+      name === "observaciones"
+    ) {
+      value = value.slice(0, 1000);
+    }
+
+    if (name === "garantiaDias") {
+      value = value.replace(/\D/g, "").slice(0, 3);
+    }
+
+    if (
+      name === "costoEstimado" ||
+      name === "costoFinal"
+    ) {
+      if (!/^\d{0,8}(\.\d{0,2})?$/.test(value)) {
+        return;
+      }
+    }
 
     setFormulario((anterior) => ({
       ...anterior,
@@ -160,6 +183,93 @@ function Repairs() {
     try {
       setGuardando(true);
       setError("");
+
+      if (!formulario.idEquipo && !reparacionEditando) {
+        throw new Error("Selecciona un equipo");
+      }
+
+      if (
+        !formulario.fallaReportada.trim() ||
+        formulario.fallaReportada.trim().length < 5
+      ) {
+        throw new Error(
+          "La falla reportada debe tener al menos 5 caracteres"
+        );
+      }
+
+      if (formulario.fallaReportada.length > 1000) {
+        throw new Error(
+          "La falla reportada no puede superar los 1000 caracteres"
+        );
+      }
+
+      if (
+        formulario.diagnostico &&
+        formulario.diagnostico.length > 1000
+      ) {
+        throw new Error(
+          "El diagnóstico no puede superar los 1000 caracteres"
+        );
+      }
+
+      if (
+        formulario.solucion &&
+        formulario.solucion.length > 1000
+      ) {
+        throw new Error(
+          "La solución no puede superar los 1000 caracteres"
+        );
+      }
+
+      if (
+        formulario.observaciones &&
+        formulario.observaciones.length > 1000
+      ) {
+        throw new Error(
+          "Las observaciones no pueden superar los 1000 caracteres"
+        );
+      }
+
+      if (
+        formulario.costoEstimado !== "" &&
+        Number(formulario.costoEstimado) < 0
+      ) {
+        throw new Error(
+          "El costo estimado no puede ser negativo"
+        );
+      }
+
+      if (
+        formulario.costoFinal !== "" &&
+        Number(formulario.costoFinal) < 0
+      ) {
+        throw new Error(
+          "El costo final no puede ser negativo"
+        );
+      }
+
+      const garantia = Number(formulario.garantiaDias || 0);
+
+      if (
+        !Number.isInteger(garantia) ||
+        garantia < 0 ||
+        garantia > 365
+      ) {
+        throw new Error(
+          "La garantía debe estar entre 0 y 365 días"
+        );
+      }
+
+      if (
+        formulario.fechaEstimada &&
+        formulario.fechaEntrega &&
+        new Date(formulario.fechaEntrega) <
+          new Date(formulario.fechaEstimada)
+      ) {
+        throw new Error(
+          "La fecha de entrega no puede ser anterior a la fecha estimada"
+        );
+      }
 
       const datos = {
         ...formulario,
@@ -201,6 +311,30 @@ function Repairs() {
     try {
       setGuardando(true);
       setError("");
+
+      const estadoActual = estados.find(
+      (estado) =>
+        Number(estado.IDESTADO) ===
+        Number(estadoSeleccionado)
+    );
+
+    const nombreEstado =
+      estadoActual?.NOMBRE?.trim().toUpperCase();
+
+    if (
+      nombreEstado === "NO REPARABLE" &&
+      comentarioEstado.trim().length < 5
+    ) {
+      throw new Error(
+        "Debes indicar el motivo por el cual el equipo no puede repararse"
+      );
+    }
+
+    if (comentarioEstado.length > 500) {
+      throw new Error(
+        "El comentario no puede superar los 500 caracteres"
+      );
+    }
 
       await cambiarEstadoReparacion(
         reparacionEstado.IDREPARACION,
@@ -489,6 +623,7 @@ function ModalReparacion({
             name="fallaReportada"
             value={formulario.fallaReportada}
             onChange={manejarCambio}
+            maxLength={1000}
             required
           />
 
@@ -497,6 +632,7 @@ function ModalReparacion({
             name="diagnostico"
             value={formulario.diagnostico}
             onChange={manejarCambio}
+            maxLength={1000}
           />
 
           <Area
@@ -504,6 +640,7 @@ function ModalReparacion({
             name="solucion"
             value={formulario.solucion}
             onChange={manejarCambio}
+            maxLength={1000}
           />
 
           <Area
@@ -511,6 +648,7 @@ function ModalReparacion({
             name="observaciones"
             value={formulario.observaciones}
             onChange={manejarCambio}
+            maxLength={1000}
           />
 
           <Campo
@@ -519,6 +657,9 @@ function ModalReparacion({
             type="number"
             value={formulario.costoEstimado}
             onChange={manejarCambio}
+            min="0"
+            max="99999999.99"
+            step="0.01"
           />
 
           <Campo
@@ -527,22 +668,9 @@ function ModalReparacion({
             type="number"
             value={formulario.costoFinal}
             onChange={manejarCambio}
-          />
-
-          <Campo
-            label="Fecha estimada"
-            name="fechaEstimada"
-            type="datetime-local"
-            value={formulario.fechaEstimada}
-            onChange={manejarCambio}
-          />
-
-          <Campo
-            label="Fecha de entrega"
-            name="fechaEntrega"
-            type="datetime-local"
-            value={formulario.fechaEntrega}
-            onChange={manejarCambio}
+            min="0"
+            max="99999999.99"
+            step="0.01"
           />
 
           <Campo
@@ -551,6 +679,9 @@ function ModalReparacion({
             type="number"
             value={formulario.garantiaDias}
             onChange={manejarCambio}
+            min="0"
+            max="365"
+            step="1"
           />
 
           {error && (
@@ -687,6 +818,9 @@ function Campo({
   value,
   onChange,
   type = "text",
+  min,
+  max,
+  step,
 }) {
   return (
     <label>
@@ -699,7 +833,9 @@ function Campo({
         name={name}
         value={value}
         onChange={onChange}
-        step={type === "number" ? "0.01" : undefined}
+        min={min}
+        max={max}
+        step={step}
         className="w-full rounded-xl border border-gray-300 px-4 py-3"
       />
     </label>
@@ -712,11 +848,15 @@ function Area({
   value,
   onChange,
   required = false,
+  maxLength = 1000,
 }) {
   return (
     <label>
       <span className="mb-2 block text-sm font-semibold">
         {label}
+        {required && (
+          <span className="text-red-600"> *</span>
+        )}
       </span>
 
       <textarea
@@ -724,9 +864,14 @@ function Area({
         value={value}
         onChange={onChange}
         required={required}
+        maxLength={maxLength}
         rows="4"
         className="w-full rounded-xl border border-gray-300 px-4 py-3"
       />
+
+      <p className="mt-1 text-right text-xs text-gray-500">
+        {value.length}/{maxLength}
+      </p>
     </label>
   );
 }
