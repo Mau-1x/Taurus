@@ -129,6 +129,24 @@ class VentaModel {
     };
   }
 
+  static async clienteExiste(idCliente) {
+    if (!idCliente) return true;
+
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input("idCliente", sql.Int, idCliente)
+      .query(`
+        SELECT IDCLIENTE
+        FROM CLIENTE
+        WHERE IDCLIENTE = @idCliente
+          AND ESTADO = 1
+      `);
+
+    return result.recordset.length > 0;
+  }
+
   static async crear(datos) {
     const pool = await getConnection();
     const transaction = new sql.Transaction(pool);
@@ -150,14 +168,14 @@ class VentaModel {
         );
 
         const productoResult = await requestProducto.query(`
-          SELECT
-            IDPRODUCTO,
-            NOMBRE,
-            PRECIO_VENTA,
-            STOCK
-          FROM PRODUCTO
-          WHERE IDPRODUCTO = @idProducto
-            AND ESTADO = 1
+        SELECT
+          IDPRODUCTO,
+          NOMBRE,
+          PRECIO_VENTA,
+          STOCK
+        FROM PRODUCTO WITH (UPDLOCK, ROWLOCK)
+        WHERE IDPRODUCTO = @idProducto
+          AND ESTADO = 1
         `);
 
         if (productoResult.recordset.length === 0) {
@@ -179,8 +197,15 @@ class VentaModel {
           Number(item.cantidad);
       }
 
-      const descuento = Number(datos.descuento || 0);
-      const total = subtotal - descuento;
+        subtotal = Number(subtotal.toFixed(2));
+
+        const descuento = Number(
+          Number(datos.descuento || 0).toFixed(2)
+        );
+
+        const total = Number(
+          (subtotal - descuento).toFixed(2)
+        );
 
       if (total < 0) {
         throw new Error(

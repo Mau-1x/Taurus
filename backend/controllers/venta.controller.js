@@ -78,6 +78,43 @@ class VentaController {
         });
       }
 
+      const descuento = Number(req.body.descuento || 0);
+
+      if (
+        !Number.isFinite(descuento) ||
+        descuento < 0 ||
+        descuento > 99999999.99
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "El descuento no es válido",
+        });
+      }
+
+      if (
+        req.body.observaciones &&
+        req.body.observaciones.trim().length > 500
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "Las observaciones no pueden superar los 500 caracteres",
+        });
+      }
+
+      if (
+        req.body.idCliente !== null &&
+        req.body.idCliente !== "" &&
+        req.body.idCliente !== undefined &&
+        (!Number.isInteger(Number(req.body.idCliente)) ||
+          Number(req.body.idCliente) <= 0)
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "El cliente seleccionado no es válido",
+        });
+      }
+
       for (const item of productos) {
         if (
           !item.idProducto ||
@@ -92,8 +129,42 @@ class VentaController {
         }
       }
 
+      const idsProductos = productos.map((item) =>
+        Number(item.idProducto)
+      );
+
+      const productosUnicos = new Set(idsProductos);
+
+      if (productosUnicos.size !== idsProductos.length) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "No puedes enviar productos repetidos en la misma venta",
+        });
+      }
+
+      const clienteValido =
+        await VentaModel.clienteExiste(
+          req.body.idCliente
+            ? Number(req.body.idCliente)
+            : null
+        );
+
+      if (!clienteValido) {
+        return res.status(404).json({
+          ok: false,
+          message: "El cliente seleccionado no existe",
+        });
+      }
+
       const venta = await VentaModel.crear({
-        ...req.body,
+        idCliente: req.body.idCliente
+          ? Number(req.body.idCliente)
+          : null,
+        metodoPago,
+        descuento,
+        observaciones:
+          req.body.observaciones?.trim() || null,
         productos: productos.map((item) => ({
           idProducto: Number(item.idProducto),
           cantidad: Number(item.cantidad),
@@ -117,9 +188,19 @@ class VentaController {
 
   static async anular(req, res) {
     try {
-      const resultado = await VentaModel.anular(
-        Number(req.params.id)
-      );
+      const idVenta = Number(req.params.id);
+
+      if (
+        !Number.isInteger(idVenta) ||
+        idVenta <= 0
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "El ID de la venta no es válido",
+        });
+      }
+
+      const resultado = await VentaModel.anular(idVenta);
 
       if (!resultado) {
         return res.status(404).json({
@@ -130,7 +211,8 @@ class VentaController {
 
       return res.json({
         ok: true,
-        message: "Venta anulada correctamente",
+        message:
+          "Venta anulada y stock devuelto correctamente",
       });
     } catch (error) {
       return res.status(400).json({

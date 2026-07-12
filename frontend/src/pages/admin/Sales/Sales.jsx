@@ -128,8 +128,15 @@ function Sales() {
       return;
     }
 
-    if (Number(cantidad) <= 0) {
-      setError("La cantidad debe ser mayor que cero");
+    const cantidadNumerica = Number(cantidad);
+
+    if (
+      !Number.isInteger(cantidadNumerica) ||
+      cantidadNumerica <= 0
+    ) {
+      setError(
+        "La cantidad debe ser un número entero mayor que cero"
+      );
       return;
     }
 
@@ -138,10 +145,10 @@ function Sales() {
     );
 
     const cantidadTotal =
-      Number(cantidad) +
+      cantidadNumerica +
       Number(existente?.cantidad || 0);
 
-    if (cantidadTotal > producto.STOCK) {
+    if (cantidadTotal > Number(producto.STOCK)) {
       setError("La cantidad supera el stock disponible");
       return;
     }
@@ -162,7 +169,7 @@ function Sales() {
         ...anteriores,
         {
           ...producto,
-          cantidad: Number(cantidad),
+          cantidad: cantidadNumerica,
         },
       ]);
     }
@@ -170,14 +177,6 @@ function Sales() {
     setProductoSeleccionado("");
     setCantidad(1);
     setError("");
-  }
-
-  function eliminarItem(idProducto) {
-    setItems((anteriores) =>
-      anteriores.filter(
-        (item) => item.IDPRODUCTO !== idProducto
-      )
-    );
   }
 
   async function guardarVenta(evento) {
@@ -191,6 +190,53 @@ function Sales() {
         throw new Error(
           "Debes agregar al menos un producto"
         );
+      }
+
+      const descuento = Number(
+        formulario.descuento || 0
+      );
+
+      if (
+        !Number.isFinite(descuento) ||
+        descuento < 0
+      ) {
+        throw new Error(
+          "El descuento no puede ser negativo"
+        );
+      }
+
+      if (descuento > subtotal) {
+        throw new Error(
+          "El descuento no puede ser mayor al subtotal"
+        );
+      }
+
+      if (
+        formulario.observaciones.length > 500
+      ) {
+        throw new Error(
+          "Las observaciones no pueden superar los 500 caracteres"
+        );
+      }
+
+      for (const item of items) {
+        if (
+          !Number.isInteger(Number(item.cantidad)) ||
+          Number(item.cantidad) <= 0
+        ) {
+          throw new Error(
+            `La cantidad de ${item.NOMBRE} no es válida`
+          );
+        }
+
+        if (
+          Number(item.cantidad) >
+          Number(item.STOCK)
+        ) {
+          throw new Error(
+            `No hay suficiente stock para ${item.NOMBRE}`
+          );
+        }
       }
 
       await crearVenta({
@@ -539,15 +585,24 @@ function Sales() {
                       ))}
                   </select>
 
-                  <input
-                    type="number"
-                    min="1"
-                    value={cantidad}
-                    onChange={(evento) =>
-                      setCantidad(evento.target.value)
+                <input
+                  type="number"
+                  min="1"
+                  max="99999"
+                  step="1"
+                  value={cantidad}
+                  onChange={(evento) => {
+                    const valor = evento.target.value;
+
+                    if (
+                      valor === "" ||
+                      /^\d{1,6}$/.test(valor)
+                    ) {
+                      setCantidad(valor);
                     }
-                    className="rounded-xl border border-gray-300 px-4 py-3"
-                  />
+                  }}
+                  className="rounded-xl border border-gray-300 px-4 py-3"
+                />
 
                   <button
                     type="button"
@@ -631,12 +686,17 @@ function Sales() {
                       setFormulario((anterior) => ({
                         ...anterior,
                         observaciones:
-                          evento.target.value,
+                          evento.target.value.slice(0, 500),
                       }))
                     }
                     rows="4"
+                    maxLength={500}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3"
                   />
+
+                  <p className="mt-1 text-right text-xs text-gray-500">
+                    {formulario.observaciones.length}/500
+                  </p>
                 </label>
 
                 <div className="rounded-2xl bg-gray-50 p-5">
@@ -652,20 +712,27 @@ function Sales() {
                       Descuento
                     </span>
 
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formulario.descuento}
-                      onChange={(evento) =>
+                  <input
+                    type="number"
+                    min="0"
+                    max={subtotal}
+                    step="0.01"
+                    value={formulario.descuento}
+                    onChange={(evento) => {
+                      const valor = evento.target.value;
+
+                      if (
+                        valor === "" ||
+                        /^\d{0,8}(\.\d{0,2})?$/.test(valor)
+                      ) {
                         setFormulario((anterior) => ({
                           ...anterior,
-                          descuento:
-                            evento.target.value,
-                        }))
+                          descuento: valor,
+                        }));
                       }
-                      className="w-full rounded-xl border border-gray-300 px-4 py-3"
-                    />
+                    }}
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3"
+                  />
                   </label>
 
                   <div className="mt-5 flex justify-between border-t pt-4 text-xl">
