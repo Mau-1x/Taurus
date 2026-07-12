@@ -1,6 +1,8 @@
 import { apiFetch } from "./apiClient";
 
-const API_URL = "http://localhost:3000/api/dashboard";
+const API_URL = `${
+  import.meta.env.VITE_API_URL || "http://localhost:3000"
+}/api/dashboard`;
 
 export async function obtenerDashboard() {
   const respuesta = await apiFetch(API_URL);

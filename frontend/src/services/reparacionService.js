@@ -1,4 +1,6 @@
-const API_URL = "http://localhost:3000/api/reparaciones";
+const API_URL = `${
+  import.meta.env.VITE_API_URL || "http://localhost:3000"
+}/api/reparaciones`;
 
 export async function buscarReparacionPorCodigo(codigo) {
   const respuesta = await fetch(

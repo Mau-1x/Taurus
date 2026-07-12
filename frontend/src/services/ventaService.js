@@ -1,6 +1,8 @@
 import { apiFetch } from "./apiClient";
 
-const API_URL = "http://localhost:3000/api/ventas";
+const API_URL = `${
+  import.meta.env.VITE_API_URL || "http://localhost:3000"
+}/api/ventas`;
 
 async function procesarRespuesta(respuesta) {
   const resultado = await respuesta.json();
