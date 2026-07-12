@@ -51,6 +51,45 @@ class UsuarioModel {
     return resultado.recordset[0] || null;
   }
 
+  static async rolExiste(idRol) {
+  const pool = await getConnection();
+
+  const resultado = await pool
+    .request()
+    .input("idRol", sql.Int, idRol)
+    .query(`
+      SELECT IDROL
+      FROM ROL
+      WHERE IDROL = @idRol
+        AND ESTADO = 1
+    `);
+
+  return resultado.recordset.length > 0;
+}
+
+  static async obtenerPorId(idUsuario) {
+    const pool = await getConnection();
+
+    const resultado = await pool
+      .request()
+      .input("idUsuario", sql.Int, idUsuario)
+      .query(`
+        SELECT
+          u.IDUSUARIO,
+          u.IDROL,
+          u.NOMBRE,
+          u.CORREO,
+          u.ESTADO,
+          r.NOMBRE AS ROL
+        FROM USUARIO u
+        INNER JOIN ROL r
+          ON u.IDROL = r.IDROL
+        WHERE u.IDUSUARIO = @idUsuario
+      `);
+
+    return resultado.recordset[0] || null;
+  }
+
   static async crear(datos) {
     const pool = await getConnection();
 

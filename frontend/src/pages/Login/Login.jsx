@@ -26,7 +26,25 @@ function Login() {
       setCargando(true);
       setError("");
 
-      await iniciarSesion(correo, password);
+      const correoLimpio = correo.trim();
+
+      if (
+        !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(
+          correoLimpio
+        )
+      ) {
+        throw new Error(
+          "Ingresa un correo electrónico válido"
+        );
+      }
+
+      if (password.length < 8) {
+        throw new Error(
+          "La contraseña debe tener al menos 8 caracteres"
+        );
+      }
+
+      await iniciarSesion(correoLimpio, password);
 
       navigate("/admin/dashboard", {
         replace: true,
@@ -97,10 +115,16 @@ function Login() {
                   type="email"
                   value={correo}
                   onChange={(evento) =>
-                    setCorreo(evento.target.value)
+                    setCorreo(
+                      evento.target.value
+                        .toLowerCase()
+                        .slice(0, 150)
+                    )
                   }
                   required
                   placeholder="admin@taurus.com"
+                  maxLength={100}
+                  autoComplete="email"
                   className="w-full rounded-xl border border-gray-300 py-3 pl-12 pr-4 outline-none transition focus:border-red-600"
                 />
               </div>
@@ -125,6 +149,9 @@ function Login() {
                   }
                   required
                   placeholder="Ingresa tu contraseña"
+                  minLength={8}
+                  maxLength={72}
+                  autoComplete="current-password"
                   className="w-full rounded-xl border border-gray-300 py-3 pl-12 pr-4 outline-none transition focus:border-red-600"
                 />
               </div>

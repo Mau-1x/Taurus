@@ -123,7 +123,27 @@ function Settings() {
   }
 
   function manejarCambio(evento) {
-    const { name, value } = evento.target;
+    const { name } = evento.target;
+    let { value } = evento.target;
+
+    if (name === "nombre") {
+      value = value
+        .replace(
+          /[^a-zA-ZÁÉÍÓÚáéíóúÑñüÜ\s-]/g,
+          ""
+        )
+        .slice(0, 120);
+    }
+
+    if (name === "correo") {
+      value = value
+        .toLowerCase()
+        .slice(0, 150);
+    }
+
+    if (name === "password") {
+      value = value.slice(0, 72);
+    }
 
     setFormulario((anterior) => ({
       ...anterior,
@@ -138,6 +158,48 @@ function Settings() {
       setGuardando(true);
       setError("");
       setMensaje("");
+
+      if (!formulario.idRol) {
+      throw new Error("Selecciona un rol");
+    }
+
+    if (
+      !/^[a-zA-ZÁÉÍÓÚáéíóúÑñüÜ\s-]{3,120}$/.test(
+        formulario.nombre.trim()
+      )
+    ) {
+      throw new Error(
+        "El nombre debe contener solo letras y tener mínimo 3 caracteres"
+      );
+    }
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(
+        formulario.correo.trim()
+      )
+    ) {
+      throw new Error(
+        "El correo electrónico no es válido"
+      );
+    }
+
+    if (formulario.password) {
+      if (formulario.password.length < 8) {
+        throw new Error(
+          "La contraseña debe tener al menos 8 caracteres"
+        );
+      }
+
+      if (
+        !/[A-Z]/.test(formulario.password) ||
+        !/[a-z]/.test(formulario.password) ||
+        !/\d/.test(formulario.password)
+      ) {
+        throw new Error(
+          "La contraseña debe incluir mayúscula, minúscula y número"
+        );
+      }
+    }
 
       const datos = {
         idRol: Number(formulario.idRol),
@@ -490,6 +552,8 @@ function Settings() {
                   name="nombre"
                   value={formulario.nombre}
                   onChange={manejarCambio}
+                  maxLength={120}
+                  autoComplete="name"
                   required
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-red-600"
                 />
@@ -530,6 +594,8 @@ function Settings() {
                   name="correo"
                   value={formulario.correo}
                   onChange={manejarCambio}
+                  maxLength={150}
+                  autoComplete="email"
                   required
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-red-600"
                 />
@@ -548,6 +614,9 @@ function Settings() {
                   name="password"
                   value={formulario.password}
                   onChange={manejarCambio}
+                  minLength={usuarioEditando ? undefined : 8}
+                  maxLength={72}
+                  autoComplete="new-password"
                   required={!usuarioEditando}
                   placeholder={
                     usuarioEditando

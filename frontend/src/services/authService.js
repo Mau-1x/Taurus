@@ -1,4 +1,6 @@
-const API_URL = "http://localhost:3000/api/auth";
+const API_URL = `${
+  import.meta.env.VITE_API_URL || "http://localhost:3000"
+}/api/auth`;
 
 async function procesarRespuesta(respuesta) {
   const resultado = await respuesta.json();
@@ -61,5 +63,27 @@ export function cerrarSesion() {
 }
 
 export function estaAutenticado() {
-  return Boolean(obtenerToken());
+  const token = obtenerToken();
+
+  if (!token) return false;
+
+  try {
+    const payload = JSON.parse(
+      atob(token.split(".")[1])
+    );
+
+    const expirado =
+      !payload.exp ||
+      payload.exp * 1000 <= Date.now();
+
+    if (expirado) {
+      cerrarSesion();
+      return false;
+    }
+
+    return true;
+  } catch {
+    cerrarSesion();
+    return false;
+  }
 }

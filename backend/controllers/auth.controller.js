@@ -2,6 +2,16 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const AuthModel = require("../models/auth.model");
 
+function validarCorreo(correo) {
+  return (
+    typeof correo === "string" &&
+    correo.length <= 150 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(
+      correo.trim()
+    )
+  );
+}
+
 class AuthController {
   static async registrarAdministrador(req, res) {
     try {
@@ -67,6 +77,23 @@ class AuthController {
         return res.status(400).json({
           ok: false,
           message: "Correo y contraseña son obligatorios",
+        });
+      }
+
+      if (!validarCorreo(correo)) {
+        return res.status(400).json({
+          ok: false,
+          message: "El correo electrónico no es válido",
+        });
+      }
+
+      if (
+        typeof password !== "string" ||
+        password.length > 72
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "La contraseña no es válida",
         });
       }
 
