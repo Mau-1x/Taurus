@@ -407,6 +407,352 @@ class ReparacionModel {
     }
   }
 
+  static async obtenerRepuestos(idReparacion) {
+  const pool = await getConnection();
+
+  const resultado = await pool
+    .request()
+    .input("idReparacion", sql.Int, idReparacion)
+    .query(`
+      SELECT
+        drp.IDDETALLE_REPARACION_PRODUCTO,
+        drp.IDREPARACION,
+        drp.IDPRODUCTO,
+        p.CODIGO,
+        p.NOMBRE AS PRODUCTO,
+        drp.CANTIDAD,
+        drp.PRECIO_UNITARIO,
+        CAST(
+          drp.CANTIDAD * drp.PRECIO_UNITARIO
+          AS DECIMAL(10,2)
+        ) AS SUBTOTAL,
+        drp.FECHA_REGISTRO
+      FROM DETALLE_REPARACION_PRODUCTO drp
+      INNER JOIN PRODUCTO p
+        ON drp.IDPRODUCTO = p.IDPRODUCTO
+      WHERE drp.IDREPARACION = @idReparacion
+        AND drp.ESTADO = 1
+      ORDER BY drp.FECHA_REGISTRO DESC
+    `);
+
+  return resultado.recordset;
+}
+
+static async agregarRepuesto(
+  idReparacion,
+  idProducto,
+  cantidad
+) {
+  const pool = await getConnection();
+  const transaction = new sql.Transaction(pool);
+
+  try {
+    await transaction.begin(
+      sql.ISOLATION_LEVEL.SERIALIZABLE
+    );
+
+    const reparacionResult = await new sql.Request(
+      transaction
+    )
+      .input("idReparacion", sql.Int, idReparacion)
+      .query(`
+        SELECT IDREPARACION, CODIGO
+        FROM REPARACION WITH (UPDLOCK, HOLDLOCK)
+        WHERE IDREPARACION = @idReparacion
+          AND ESTADO = 1
+      `);
+
+    if (reparacionResult.recordset.length === 0) {
+      const error = new Error(
+        "La reparación no existe"
+      );
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const productoResult = await new sql.Request(
+      transaction
+    )
+      .input("idProducto", sql.Int, idProducto)
+      .query(`
+        SELECT
+          IDPRODUCTO,
+          NOMBRE,
+          PRECIO_VENTA,
+          STOCK
+        FROM PRODUCTO WITH (UPDLOCK, HOLDLOCK)
+        WHERE IDPRODUCTO = @idProducto
+          AND ESTADO = 1
+      `);
+
+    if (productoResult.recordset.length === 0) {
+      const error = new Error(
+        "El producto no existe o está inactivo"
+      );
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const producto = productoResult.recordset[0];
+
+    if (producto.STOCK < cantidad) {
+      const error = new Error(
+        `Stock insuficiente. Disponible: ${producto.STOCK}`
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const stockAnterior = producto.STOCK;
+    const stockNuevo = stockAnterior - cantidad;
+
+    const detalleResult = await new sql.Request(
+      transaction
+    )
+      .input("idReparacion", sql.Int, idReparacion)
+      .input("idProducto", sql.Int, idProducto)
+      .query(`
+        SELECT
+          IDDETALLE_REPARACION_PRODUCTO,
+          CANTIDAD,
+          ESTADO
+        FROM DETALLE_REPARACION_PRODUCTO
+          WITH (UPDLOCK, HOLDLOCK)
+        WHERE IDREPARACION = @idReparacion
+          AND IDPRODUCTO = @idProducto
+      `);
+
+    if (detalleResult.recordset.length > 0) {
+      await new sql.Request(transaction)
+        .input("idReparacion", sql.Int, idReparacion)
+        .input("idProducto", sql.Int, idProducto)
+        .input("cantidad", sql.Int, cantidad)
+        .input(
+          "precioUnitario",
+          sql.Decimal(10, 2),
+          producto.PRECIO_VENTA
+        )
+        .query(`
+          UPDATE DETALLE_REPARACION_PRODUCTO
+          SET
+            CANTIDAD =
+              CASE
+                WHEN ESTADO = 1
+                  THEN CANTIDAD + @cantidad
+                ELSE @cantidad
+              END,
+            PRECIO_UNITARIO = @precioUnitario,
+            FECHA_REGISTRO = SYSDATETIME(),
+            ESTADO = 1
+          WHERE IDREPARACION = @idReparacion
+            AND IDPRODUCTO = @idProducto
+        `);
+    } else {
+      await new sql.Request(transaction)
+        .input("idReparacion", sql.Int, idReparacion)
+        .input("idProducto", sql.Int, idProducto)
+        .input("cantidad", sql.Int, cantidad)
+        .input(
+          "precioUnitario",
+          sql.Decimal(10, 2),
+          producto.PRECIO_VENTA
+        )
+        .query(`
+          INSERT INTO DETALLE_REPARACION_PRODUCTO (
+            IDREPARACION,
+            IDPRODUCTO,
+            CANTIDAD,
+            PRECIO_UNITARIO
+          )
+          VALUES (
+            @idReparacion,
+            @idProducto,
+            @cantidad,
+            @precioUnitario
+          )
+        `);
+    }
+
+    await new sql.Request(transaction)
+      .input("idProducto", sql.Int, idProducto)
+      .input("stockNuevo", sql.Int, stockNuevo)
+      .query(`
+        UPDATE PRODUCTO
+        SET STOCK = @stockNuevo
+        WHERE IDPRODUCTO = @idProducto
+      `);
+
+    await new sql.Request(transaction)
+      .input("idProducto", sql.Int, idProducto)
+      .input("cantidad", sql.Int, cantidad)
+      .input("stockAnterior", sql.Int, stockAnterior)
+      .input("stockNuevo", sql.Int, stockNuevo)
+      .input(
+        "motivo",
+        sql.VarChar(300),
+        `Repuesto usado en reparación ${
+          reparacionResult.recordset[0].CODIGO
+        }`
+      )
+      .query(`
+        INSERT INTO MOVIMIENTO_INVENTARIO (
+          IDPRODUCTO,
+          TIPO,
+          CANTIDAD,
+          STOCK_ANTERIOR,
+          STOCK_NUEVO,
+          MOTIVO
+        )
+        VALUES (
+          @idProducto,
+          'SALIDA',
+          @cantidad,
+          @stockAnterior,
+          @stockNuevo,
+          @motivo
+        )
+      `);
+
+    await transaction.commit();
+
+    return {
+      idProducto,
+      producto: producto.NOMBRE,
+      cantidad,
+      stockAnterior,
+      stockNuevo,
+    };
+  } catch (error) {
+    if (transaction._aborted === false) {
+      await transaction.rollback();
+    }
+
+    throw error;
+  }
+}
+
+  static async quitarRepuesto(
+    idReparacion,
+    idProducto
+  ) {
+    const pool = await getConnection();
+    const transaction = new sql.Transaction(pool);
+
+    try {
+      await transaction.begin(
+        sql.ISOLATION_LEVEL.SERIALIZABLE
+      );
+
+      const detalleResult = await new sql.Request(
+        transaction
+      )
+        .input("idReparacion", sql.Int, idReparacion)
+        .input("idProducto", sql.Int, idProducto)
+        .query(`
+          SELECT
+            drp.CANTIDAD,
+            r.CODIGO
+          FROM DETALLE_REPARACION_PRODUCTO drp
+          INNER JOIN REPARACION r
+            ON drp.IDREPARACION = r.IDREPARACION
+          WHERE drp.IDREPARACION = @idReparacion
+            AND drp.IDPRODUCTO = @idProducto
+            AND drp.ESTADO = 1
+        `);
+
+      if (detalleResult.recordset.length === 0) {
+        const error = new Error(
+          "El repuesto no está registrado en la reparación"
+        );
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const detalle = detalleResult.recordset[0];
+
+      const productoResult = await new sql.Request(
+        transaction
+      )
+        .input("idProducto", sql.Int, idProducto)
+        .query(`
+          SELECT STOCK
+          FROM PRODUCTO WITH (UPDLOCK, HOLDLOCK)
+          WHERE IDPRODUCTO = @idProducto
+        `);
+
+      if (productoResult.recordset.length === 0) {
+        const error = new Error(
+          "Producto no encontrado"
+        );
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const stockAnterior =
+        productoResult.recordset[0].STOCK;
+
+      const stockNuevo =
+        stockAnterior + detalle.CANTIDAD;
+
+      await new sql.Request(transaction)
+        .input("idReparacion", sql.Int, idReparacion)
+        .input("idProducto", sql.Int, idProducto)
+        .query(`
+          UPDATE DETALLE_REPARACION_PRODUCTO
+          SET ESTADO = 0
+          WHERE IDREPARACION = @idReparacion
+            AND IDPRODUCTO = @idProducto
+        `);
+
+      await new sql.Request(transaction)
+        .input("idProducto", sql.Int, idProducto)
+        .input("stockNuevo", sql.Int, stockNuevo)
+        .query(`
+          UPDATE PRODUCTO
+          SET STOCK = @stockNuevo
+          WHERE IDPRODUCTO = @idProducto
+        `);
+
+      await new sql.Request(transaction)
+        .input("idProducto", sql.Int, idProducto)
+        .input("cantidad", sql.Int, detalle.CANTIDAD)
+        .input("stockAnterior", sql.Int, stockAnterior)
+        .input("stockNuevo", sql.Int, stockNuevo)
+        .input(
+          "motivo",
+          sql.VarChar(300),
+          `Repuesto retirado de reparación ${detalle.CODIGO}`
+        )
+        .query(`
+          INSERT INTO MOVIMIENTO_INVENTARIO (
+            IDPRODUCTO,
+            TIPO,
+            CANTIDAD,
+            STOCK_ANTERIOR,
+            STOCK_NUEVO,
+            MOTIVO
+          )
+          VALUES (
+            @idProducto,
+            'ENTRADA',
+            @cantidad,
+            @stockAnterior,
+            @stockNuevo,
+            @motivo
+          )
+        `);
+
+      await transaction.commit();
+      return true;
+    } catch (error) {
+      if (transaction._aborted === false) {
+        await transaction.rollback();
+      }
+
+      throw error;
+    }
+  }
+
   static async obtenerHistorial(idReparacion) {
     const pool = await getConnection();
 

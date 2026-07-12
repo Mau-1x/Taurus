@@ -410,6 +410,155 @@ class ReparacionController {
     }
   }
 
+  static async obtenerRepuestos(req, res) {
+  try {
+    const idReparacion = Number(req.params.id);
+
+    if (
+      !Number.isInteger(idReparacion) ||
+      idReparacion <= 0
+    ) {
+      return res.status(400).json({
+        ok: false,
+        message: "La reparación no es válida",
+      });
+    }
+
+    const repuestos =
+      await ReparacionModel.obtenerRepuestos(
+        idReparacion
+      );
+
+    return res.json({
+      ok: true,
+      total: repuestos.length,
+      data: repuestos,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      message:
+        "No se pudieron obtener los repuestos",
+      error: error.message,
+    });
+  }
+}
+
+static async agregarRepuesto(req, res) {
+  try {
+    const idReparacion = Number(req.params.id);
+    const idProducto = Number(req.body.idProducto);
+    const cantidad = Number(req.body.cantidad);
+
+    if (
+      !Number.isInteger(idReparacion) ||
+      idReparacion <= 0
+    ) {
+      return res.status(400).json({
+        ok: false,
+        message: "La reparación no es válida",
+      });
+    }
+
+    if (
+      !Number.isInteger(idProducto) ||
+      idProducto <= 0
+    ) {
+      return res.status(400).json({
+        ok: false,
+        message: "Selecciona un producto válido",
+      });
+    }
+
+    if (
+      !Number.isInteger(cantidad) ||
+      cantidad <= 0 ||
+      cantidad > 999
+    ) {
+      return res.status(400).json({
+        ok: false,
+        message:
+          "La cantidad debe ser un número entre 1 y 999",
+      });
+    }
+
+    const resultado =
+      await ReparacionModel.agregarRepuesto(
+        idReparacion,
+        idProducto,
+        cantidad
+      );
+
+    return res.status(201).json({
+      ok: true,
+      message:
+        "Repuesto agregado y stock actualizado correctamente",
+      data: resultado,
+    });
+  } catch (error) {
+    console.error(
+      "Error agregando repuesto:",
+      error
+    );
+
+    return res
+      .status(error.statusCode || 500)
+      .json({
+        ok: false,
+        message:
+          error.message ||
+          "No se pudo agregar el repuesto",
+      });
+  }
+}
+
+  static async quitarRepuesto(req, res) {
+    try {
+      const idReparacion = Number(req.params.id);
+      const idProducto = Number(
+        req.params.idProducto
+      );
+
+      if (
+        !Number.isInteger(idReparacion) ||
+        idReparacion <= 0 ||
+        !Number.isInteger(idProducto) ||
+        idProducto <= 0
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La reparación o el producto no son válidos",
+        });
+      }
+
+      await ReparacionModel.quitarRepuesto(
+        idReparacion,
+        idProducto
+      );
+
+      return res.json({
+        ok: true,
+        message:
+          "Repuesto retirado y stock restaurado correctamente",
+      });
+    } catch (error) {
+      console.error(
+        "Error retirando repuesto:",
+        error
+      );
+
+      return res
+        .status(error.statusCode || 500)
+        .json({
+          ok: false,
+          message:
+            error.message ||
+            "No se pudo retirar el repuesto",
+        });
+    }
+  }
+
   static async obtenerHistorial(req, res) {
     try {
       const historial = await ReparacionModel.obtenerHistorial(

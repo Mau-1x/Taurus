@@ -71,3 +71,44 @@ export async function cambiarEstadoReparacion(
 
   return procesarRespuesta(respuesta);
 }
+
+export async function obtenerRepuestosReparacion(
+  idReparacion
+) {
+  const respuesta = await apiFetch(
+    `${API_URL}/${idReparacion}/repuestos`
+  );
+
+  const resultado = await procesarRespuesta(respuesta);
+
+  return resultado.data;
+}
+
+export async function agregarRepuestoReparacion(
+  idReparacion,
+  datos
+) {
+  const respuesta = await apiFetch(
+    `${API_URL}/${idReparacion}/repuestos`,
+    {
+      method: "POST",
+      body: JSON.stringify(datos),
+    }
+  );
+
+  return procesarRespuesta(respuesta);
+}
+
+export async function quitarRepuestoReparacion(
+  idReparacion,
+  idProducto
+) {
+  const respuesta = await apiFetch(
+    `${API_URL}/${idReparacion}/repuestos/${idProducto}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  return procesarRespuesta(respuesta);
+}

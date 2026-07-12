@@ -34,6 +34,21 @@ router.get(
 );
 
 router.get(
+  "/:id/repuestos",
+  ReparacionController.obtenerRepuestos
+);
+
+router.post(
+  "/:id/repuestos",
+  ReparacionController.agregarRepuesto
+);
+
+router.delete(
+  "/:id/repuestos/:idProducto",
+  ReparacionController.quitarRepuesto
+);
+
+router.get(
   "/",
   ReparacionController.obtenerTodos
 );

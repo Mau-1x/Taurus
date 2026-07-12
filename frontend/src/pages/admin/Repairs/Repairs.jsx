@@ -7,8 +7,12 @@ import {
   X,
   LoaderCircle,
   Wrench,
+  PackagePlus,
+  Trash2,
+  Boxes,
 } from "lucide-react";
 
+import { obtenerProductos } from "../../../services/productoService";
 import { obtenerEquipos } from "../../../services/equipoService";
 
 import {
@@ -17,6 +21,9 @@ import {
   crearReparacion,
   actualizarReparacion,
   cambiarEstadoReparacion,
+  obtenerRepuestosReparacion,
+  agregarRepuestoReparacion,
+  quitarRepuestoReparacion,
 } from "../../../services/reparacionAdminService";
 
 const formularioInicial = {
@@ -36,6 +43,25 @@ function Repairs() {
   const [reparaciones, setReparaciones] = useState([]);
   const [equipos, setEquipos] = useState([]);
   const [estados, setEstados] = useState([]);
+
+  const [productos, setProductos] = useState([]);
+  const [modalRepuestos, setModalRepuestos] =
+    useState(false);
+
+  const [reparacionRepuestos, setReparacionRepuestos] =
+    useState(null);
+
+  const [repuestosUsados, setRepuestosUsados] =
+    useState([]);
+
+  const [idProductoSeleccionado, setIdProductoSeleccionado] =
+    useState("");
+
+  const [cantidadRepuesto, setCantidadRepuesto] =
+    useState("1");
+
+  const [cargandoRepuestos, setCargandoRepuestos] =
+    useState(false);
 
   const [busqueda, setBusqueda] = useState("");
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -69,19 +95,22 @@ function Repairs() {
       setCargando(true);
       setError("");
 
-      const [
-        datosReparaciones,
-        datosEquipos,
-        datosEstados,
-      ] = await Promise.all([
-        obtenerReparaciones(),
-        obtenerEquipos(),
-        obtenerEstadosReparacion(),
-      ]);
+    const [
+      datosReparaciones,
+      datosEquipos,
+      datosEstados,
+      datosProductos,
+    ] = await Promise.all([
+      obtenerReparaciones(),
+      obtenerEquipos(),
+      obtenerEstadosReparacion(),
+      obtenerProductos(),
+    ]);
 
       setReparaciones(datosReparaciones);
       setEquipos(datosEquipos);
       setEstados(datosEstados);
+      setProductos(datosProductos);
     } catch (errorCarga) {
       setError(errorCarga.message);
     } finally {
@@ -353,6 +382,110 @@ function Repairs() {
     }
   }
 
+  async function abrirRepuestos(reparacion) {
+  try {
+    setReparacionRepuestos(reparacion);
+    setModalRepuestos(true);
+    setCargandoRepuestos(true);
+    setError("");
+    setIdProductoSeleccionado("");
+    setCantidadRepuesto("1");
+
+    const datos =
+      await obtenerRepuestosReparacion(
+        reparacion.IDREPARACION
+      );
+
+    setRepuestosUsados(datos);
+  } catch (errorCarga) {
+    setError(errorCarga.message);
+  } finally {
+    setCargandoRepuestos(false);
+  }
+}
+
+async function recargarRepuestos() {
+  const datos = await obtenerRepuestosReparacion(
+    reparacionRepuestos.IDREPARACION
+  );
+
+  setRepuestosUsados(datos);
+}
+
+async function guardarRepuesto(evento) {
+  evento.preventDefault();
+
+  try {
+    setGuardando(true);
+    setError("");
+
+    const idProducto = Number(
+      idProductoSeleccionado
+    );
+
+    const cantidad = Number(cantidadRepuesto);
+
+    if (
+      !Number.isInteger(idProducto) ||
+      idProducto <= 0
+    ) {
+      throw new Error("Selecciona un repuesto");
+    }
+
+    if (
+      !Number.isInteger(cantidad) ||
+      cantidad <= 0
+    ) {
+      throw new Error(
+        "La cantidad debe ser mayor a cero"
+      );
+    }
+
+    await agregarRepuestoReparacion(
+      reparacionRepuestos.IDREPARACION,
+      {
+        idProducto,
+        cantidad,
+      }
+    );
+
+    await recargarRepuestos();
+    await cargarDatos();
+
+    setIdProductoSeleccionado("");
+    setCantidadRepuesto("1");
+  } catch (errorGuardado) {
+    setError(errorGuardado.message);
+  } finally {
+    setGuardando(false);
+  }
+}
+
+  async function eliminarRepuesto(repuesto) {
+    const confirmar = window.confirm(
+      `¿Deseas quitar ${repuesto.PRODUCTO} de esta reparación?`
+    );
+
+    if (!confirmar) return;
+
+    try {
+      setGuardando(true);
+      setError("");
+
+      await quitarRepuestoReparacion(
+        reparacionRepuestos.IDREPARACION,
+        repuesto.IDPRODUCTO
+      );
+
+      await recargarRepuestos();
+      await cargarDatos();
+    } catch (errorEliminar) {
+      setError(errorEliminar.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   return (
     <section>
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -491,6 +624,14 @@ function Repairs() {
                     <td className="py-4">
                       <div className="flex justify-end gap-2">
                         <button
+                          onClick={() => abrirRepuestos(reparacion)}
+                          title="Administrar repuestos"
+                          className="rounded-lg bg-green-50 p-2 text-green-700 hover:bg-green-100"
+                        >
+                          <PackagePlus size={18} />
+
+                        </button>
+                        <button
                           onClick={() =>
                             abrirCambioEstado(reparacion)
                           }
@@ -555,6 +696,28 @@ function Repairs() {
           error={error}
           guardar={guardarCambioEstado}
           cerrar={() => setModalEstado(false)}
+        />
+      )}
+      {modalRepuestos && (
+        <ModalRepuestos
+          reparacion={reparacionRepuestos}
+          productos={productos}
+          repuestos={repuestosUsados}
+          idProducto={idProductoSeleccionado}
+          setIdProducto={setIdProductoSeleccionado}
+          cantidad={cantidadRepuesto}
+          setCantidad={setCantidadRepuesto}
+          cargando={cargandoRepuestos}
+          guardando={guardando}
+          error={error}
+          guardar={guardarRepuesto}
+          eliminar={eliminarRepuesto}
+          cerrar={() => {
+            setModalRepuestos(false);
+            setReparacionRepuestos(null);
+            setRepuestosUsados([]);
+            setError("");
+          }}
         />
       )}
     </section>
@@ -808,6 +971,252 @@ function ModalEstado({
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function ModalRepuestos({
+  reparacion,
+  productos,
+  repuestos,
+  idProducto,
+  setIdProducto,
+  cantidad,
+  setCantidad,
+  cargando,
+  guardando,
+  error,
+  guardar,
+  eliminar,
+  cerrar,
+}) {
+  const productosDisponibles = productos.filter(
+    (producto) =>
+      producto.ESTADO &&
+      Number(producto.STOCK) > 0
+  );
+
+  const total = repuestos.reduce(
+    (acumulado, repuesto) =>
+      acumulado + Number(repuesto.SUBTOTAL || 0),
+    0
+  );
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4">
+      <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white">
+        <div className="flex items-center justify-between border-b px-7 py-5">
+          <div>
+            <h2 className="text-2xl font-bold">
+              Repuestos utilizados
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              {reparacion?.CODIGO} —{" "}
+              {reparacion?.MARCA}{" "}
+              {reparacion?.MODELO}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={cerrar}
+            className="rounded-lg p-2 hover:bg-gray-100"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <form
+          onSubmit={guardar}
+          className="grid gap-4 border-b p-7 md:grid-cols-[1fr_150px_auto]"
+        >
+          <label>
+            <span className="mb-2 block text-sm font-semibold">
+              Repuesto
+            </span>
+
+            <select
+              value={idProducto}
+              onChange={(evento) =>
+                setIdProducto(evento.target.value)
+              }
+              required
+              className="w-full rounded-xl border border-gray-300 px-4 py-3"
+            >
+              <option value="">
+                Seleccionar repuesto
+              </option>
+
+              {productosDisponibles.map((producto) => (
+                <option
+                  key={producto.IDPRODUCTO}
+                  value={producto.IDPRODUCTO}
+                >
+                  {producto.NOMBRE} — Stock:{" "}
+                  {producto.STOCK} — S/{" "}
+                  {Number(
+                    producto.PRECIO_VENTA
+                  ).toFixed(2)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span className="mb-2 block text-sm font-semibold">
+              Cantidad
+            </span>
+
+            <input
+              type="number"
+              min="1"
+              max="999"
+              step="1"
+              value={cantidad}
+              onChange={(evento) =>
+                setCantidad(
+                  evento.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, 3)
+                )
+              }
+              required
+              className="w-full rounded-xl border border-gray-300 px-4 py-3"
+            />
+          </label>
+
+          <div className="flex items-end">
+            <button
+              type="submit"
+              disabled={guardando}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-800 disabled:opacity-60"
+            >
+              {guardando ? (
+                <LoaderCircle
+                  size={19}
+                  className="animate-spin"
+                />
+              ) : (
+                <Plus size={19} />
+              )}
+
+              Agregar
+            </button>
+          </div>
+
+          {error && (
+            <div className="rounded-xl bg-red-50 p-4 text-red-700 md:col-span-3">
+              {error}
+            </div>
+          )}
+        </form>
+
+        <div className="p-7">
+          <div className="mb-5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Boxes
+                size={21}
+                className="text-green-700"
+              />
+
+              <h3 className="text-lg font-bold">
+                Repuestos agregados
+              </h3>
+            </div>
+
+            <p className="font-bold text-gray-900">
+              Total: S/ {total.toFixed(2)}
+            </p>
+          </div>
+
+          {cargando ? (
+            <div className="flex justify-center py-14">
+              <LoaderCircle
+                size={36}
+                className="animate-spin text-red-700"
+              />
+            </div>
+          ) : repuestos.length === 0 ? (
+            <div className="rounded-xl bg-gray-50 py-12 text-center text-gray-500">
+              No se han registrado repuestos.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[700px]">
+                <thead>
+                  <tr className="border-b text-left text-sm text-gray-500">
+                    <th className="pb-3">Producto</th>
+                    <th className="pb-3">Cantidad</th>
+                    <th className="pb-3">
+                      Precio unitario
+                    </th>
+                    <th className="pb-3">
+                      Subtotal
+                    </th>
+                    <th className="pb-3 text-right">
+                      Acción
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {repuestos.map((repuesto) => (
+                    <tr
+                      key={
+                        repuesto.IDDETALLE_REPARACION_PRODUCTO
+                      }
+                      className="border-b border-gray-100"
+                    >
+                      <td className="py-4">
+                        <p className="font-semibold">
+                          {repuesto.PRODUCTO}
+                        </p>
+
+                        <p className="text-sm text-gray-500">
+                          {repuesto.CODIGO}
+                        </p>
+                      </td>
+
+                      <td className="py-4">
+                        {repuesto.CANTIDAD}
+                      </td>
+
+                      <td className="py-4">
+                        S/{" "}
+                        {Number(
+                          repuesto.PRECIO_UNITARIO
+                        ).toFixed(2)}
+                      </td>
+
+                      <td className="py-4 font-semibold">
+                        S/{" "}
+                        {Number(
+                          repuesto.SUBTOTAL
+                        ).toFixed(2)}
+                      </td>
+
+                      <td className="py-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            eliminar(repuesto)
+                          }
+                          disabled={guardando}
+                          title="Quitar repuesto"
+                          className="rounded-lg bg-red-50 p-2 text-red-700 hover:bg-red-100 disabled:opacity-50"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
