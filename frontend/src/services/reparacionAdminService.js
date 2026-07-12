@@ -112,3 +112,44 @@ export async function quitarRepuestoReparacion(
 
   return procesarRespuesta(respuesta);
 }
+
+export async function obtenerPagosReparacion(
+  idReparacion
+) {
+  const respuesta = await apiFetch(
+    `${API_URL}/${idReparacion}/pagos`
+  );
+
+  const resultado = await procesarRespuesta(respuesta);
+
+  return resultado.data;
+}
+
+export async function registrarPagoReparacion(
+  idReparacion,
+  datos
+) {
+  const respuesta = await apiFetch(
+    `${API_URL}/${idReparacion}/pagos`,
+    {
+      method: "POST",
+      body: JSON.stringify(datos),
+    }
+  );
+
+  return procesarRespuesta(respuesta);
+}
+
+export async function anularPagoReparacion(
+  idReparacion,
+  idPago
+) {
+  const respuesta = await apiFetch(
+    `${API_URL}/${idReparacion}/pagos/${idPago}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  return procesarRespuesta(respuesta);
+}

@@ -753,6 +753,321 @@ static async agregarRepuesto(
     }
   }
 
+    static async obtenerPagos(idReparacion) {
+    const pool = await getConnection();
+
+    const resultado = await pool
+      .request()
+      .input("idReparacion", sql.Int, idReparacion)
+      .query(`
+        SELECT
+          pr.IDPAGO,
+          pr.IDREPARACION,
+          pr.IDUSUARIO,
+          pr.MONTO,
+          pr.METODO_PAGO,
+          pr.OBSERVACIONES,
+          pr.FECHA_PAGO,
+          u.NOMBRE AS USUARIO
+        FROM PAGO_REPARACION pr
+        INNER JOIN USUARIO u
+          ON pr.IDUSUARIO = u.IDUSUARIO
+        WHERE pr.IDREPARACION = @idReparacion
+          AND pr.ESTADO = 1
+        ORDER BY pr.FECHA_PAGO DESC,
+                pr.IDPAGO DESC
+      `);
+
+    return resultado.recordset;
+  }
+
+  static async obtenerResumenPagos(idReparacion) {
+    const pool = await getConnection();
+
+    const resultado = await pool
+      .request()
+      .input("idReparacion", sql.Int, idReparacion)
+      .query(`
+        SELECT
+          r.IDREPARACION,
+          r.CODIGO,
+          CAST(
+            COALESCE(
+              r.COSTO_FINAL,
+              r.COSTO_ESTIMADO,
+              0
+            )
+            AS DECIMAL(10,2)
+          ) AS TOTAL_REPARACION,
+
+          CAST(
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN pr.ESTADO = 1
+                    THEN pr.MONTO
+                  ELSE 0
+                END
+              ),
+              0
+            )
+            AS DECIMAL(10,2)
+          ) AS TOTAL_PAGADO,
+
+          CAST(
+            CASE
+              WHEN
+                COALESCE(
+                  SUM(
+                    CASE
+                      WHEN pr.ESTADO = 1
+                        THEN pr.MONTO
+                      ELSE 0
+                    END
+                  ),
+                  0
+                ) >=
+                COALESCE(
+                  r.COSTO_FINAL,
+                  r.COSTO_ESTIMADO,
+                  0
+                )
+                THEN 0
+              ELSE
+                COALESCE(
+                  r.COSTO_FINAL,
+                  r.COSTO_ESTIMADO,
+                  0
+                )
+                -
+                COALESCE(
+                  SUM(
+                    CASE
+                      WHEN pr.ESTADO = 1
+                        THEN pr.MONTO
+                      ELSE 0
+                    END
+                  ),
+                  0
+                )
+            END
+            AS DECIMAL(10,2)
+          ) AS SALDO_PENDIENTE,
+
+          CASE
+            WHEN
+              COALESCE(
+                r.COSTO_FINAL,
+                r.COSTO_ESTIMADO,
+                0
+              ) <= 0
+              THEN 'SIN COSTO'
+
+            WHEN
+              COALESCE(
+                SUM(
+                  CASE
+                    WHEN pr.ESTADO = 1
+                      THEN pr.MONTO
+                    ELSE 0
+                  END
+                ),
+                0
+              ) = 0
+              THEN 'PENDIENTE'
+
+            WHEN
+              COALESCE(
+                SUM(
+                  CASE
+                    WHEN pr.ESTADO = 1
+                      THEN pr.MONTO
+                    ELSE 0
+                  END
+                ),
+                0
+              ) <
+              COALESCE(
+                r.COSTO_FINAL,
+                r.COSTO_ESTIMADO,
+                0
+              )
+              THEN 'PARCIAL'
+
+            ELSE 'PAGADO'
+          END AS ESTADO_PAGO
+        FROM REPARACION r
+        LEFT JOIN PAGO_REPARACION pr
+          ON r.IDREPARACION = pr.IDREPARACION
+        WHERE r.IDREPARACION = @idReparacion
+          AND r.ESTADO = 1
+        GROUP BY
+          r.IDREPARACION,
+          r.CODIGO,
+          r.COSTO_FINAL,
+          r.COSTO_ESTIMADO
+      `);
+
+    return resultado.recordset[0] || null;
+  }
+
+  static async registrarPago(
+    idReparacion,
+    idUsuario,
+    datos
+  ) {
+    const pool = await getConnection();
+    const transaction = new sql.Transaction(pool);
+
+    try {
+      await transaction.begin(
+        sql.ISOLATION_LEVEL.SERIALIZABLE
+      );
+
+      const reparacionResult = await new sql.Request(
+        transaction
+      )
+        .input("idReparacion", sql.Int, idReparacion)
+        .query(`
+          SELECT
+            IDREPARACION,
+            CODIGO,
+            COALESCE(
+              COSTO_FINAL,
+              COSTO_ESTIMADO,
+              0
+            ) AS TOTAL_REPARACION
+          FROM REPARACION WITH (UPDLOCK, HOLDLOCK)
+          WHERE IDREPARACION = @idReparacion
+            AND ESTADO = 1
+        `);
+
+      if (reparacionResult.recordset.length === 0) {
+        const error = new Error(
+          "La reparación no existe"
+        );
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const reparacion =
+        reparacionResult.recordset[0];
+
+      const totalReparacion = Number(
+        reparacion.TOTAL_REPARACION
+      );
+
+      if (totalReparacion <= 0) {
+        const error = new Error(
+          "Primero debes registrar el costo de la reparación"
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const pagosResult = await new sql.Request(
+        transaction
+      )
+        .input("idReparacion", sql.Int, idReparacion)
+        .query(`
+          SELECT
+            COALESCE(SUM(MONTO), 0) AS TOTAL_PAGADO
+          FROM PAGO_REPARACION WITH (UPDLOCK, HOLDLOCK)
+          WHERE IDREPARACION = @idReparacion
+            AND ESTADO = 1
+        `);
+
+      const totalPagado = Number(
+        pagosResult.recordset[0].TOTAL_PAGADO
+      );
+
+      const saldoPendiente =
+        totalReparacion - totalPagado;
+
+      if (datos.monto > saldoPendiente) {
+        const error = new Error(
+          `El pago supera el saldo pendiente de S/ ${saldoPendiente.toFixed(
+            2
+          )}`
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const pagoResult = await new sql.Request(
+        transaction
+      )
+        .input("idReparacion", sql.Int, idReparacion)
+        .input("idUsuario", sql.Int, idUsuario)
+        .input(
+          "monto",
+          sql.Decimal(10, 2),
+          datos.monto
+        )
+        .input(
+          "metodoPago",
+          sql.VarChar(20),
+          datos.metodoPago
+        )
+        .input(
+          "observaciones",
+          sql.VarChar(300),
+          datos.observaciones || null
+        )
+        .query(`
+          INSERT INTO PAGO_REPARACION (
+            IDREPARACION,
+            IDUSUARIO,
+            MONTO,
+            METODO_PAGO,
+            OBSERVACIONES
+          )
+          OUTPUT
+            INSERTED.IDPAGO,
+            INSERTED.MONTO,
+            INSERTED.FECHA_PAGO
+          VALUES (
+            @idReparacion,
+            @idUsuario,
+            @monto,
+            @metodoPago,
+            @observaciones
+          )
+        `);
+
+      await transaction.commit();
+
+      return pagoResult.recordset[0];
+    } catch (error) {
+      if (transaction._aborted === false) {
+        await transaction.rollback();
+      }
+
+      throw error;
+    }
+  }
+
+  static async anularPago(
+    idReparacion,
+    idPago
+  ) {
+    const pool = await getConnection();
+
+    const resultado = await pool
+      .request()
+      .input("idReparacion", sql.Int, idReparacion)
+      .input("idPago", sql.Int, idPago)
+      .query(`
+        UPDATE PAGO_REPARACION
+        SET ESTADO = 0
+        WHERE IDPAGO = @idPago
+          AND IDREPARACION = @idReparacion
+          AND ESTADO = 1
+      `);
+
+    return resultado.rowsAffected[0] > 0;
+  }
+
   static async obtenerHistorial(idReparacion) {
     const pool = await getConnection();
 

@@ -10,6 +10,8 @@ import {
   PackagePlus,
   Trash2,
   Boxes,
+  Wallet,
+  CircleDollarSign,
 } from "lucide-react";
 
 import { obtenerProductos } from "../../../services/productoService";
@@ -24,6 +26,9 @@ import {
   obtenerRepuestosReparacion,
   agregarRepuestoReparacion,
   quitarRepuestoReparacion,
+  obtenerPagosReparacion,
+  registrarPagoReparacion,
+  anularPagoReparacion,
 } from "../../../services/reparacionAdminService";
 
 const formularioInicial = {
@@ -53,6 +58,27 @@ function Repairs() {
 
   const [repuestosUsados, setRepuestosUsados] =
     useState([]);
+
+  const [modalPagos, setModalPagos] = useState(false);
+
+  const [reparacionPagos, setReparacionPagos] =
+    useState(null);
+
+  const [pagos, setPagos] = useState([]);
+
+  const [resumenPagos, setResumenPagos] =
+    useState(null);
+
+  const [montoPago, setMontoPago] = useState("");
+
+  const [metodoPago, setMetodoPago] =
+    useState("EFECTIVO");
+
+  const [observacionPago, setObservacionPago] =
+    useState("");
+
+  const [cargandoPagos, setCargandoPagos] =
+    useState(false);
 
   const [idProductoSeleccionado, setIdProductoSeleccionado] =
     useState("");
@@ -486,6 +512,116 @@ async function guardarRepuesto(evento) {
     }
   }
 
+  async function abrirPagos(reparacion) {
+  try {
+    setReparacionPagos(reparacion);
+    setModalPagos(true);
+    setCargandoPagos(true);
+    setError("");
+    setMontoPago("");
+    setMetodoPago("EFECTIVO");
+    setObservacionPago("");
+
+    const datos = await obtenerPagosReparacion(
+      reparacion.IDREPARACION
+    );
+
+    setResumenPagos(datos.resumen);
+    setPagos(datos.pagos);
+  } catch (errorCarga) {
+    setError(errorCarga.message);
+  } finally {
+    setCargandoPagos(false);
+  }
+}
+
+async function recargarPagos() {
+  const datos = await obtenerPagosReparacion(
+    reparacionPagos.IDREPARACION
+  );
+
+  setResumenPagos(datos.resumen);
+  setPagos(datos.pagos);
+}
+
+async function guardarPago(evento) {
+  evento.preventDefault();
+
+  try {
+    setGuardando(true);
+    setError("");
+
+    const monto = Number(montoPago);
+
+    if (
+      !Number.isFinite(monto) ||
+      monto <= 0
+    ) {
+      throw new Error(
+        "Ingresa un monto mayor a cero"
+      );
+    }
+
+    if (
+      resumenPagos &&
+      monto >
+        Number(resumenPagos.SALDO_PENDIENTE)
+    ) {
+      throw new Error(
+        `El pago no puede superar el saldo pendiente de S/ ${Number(
+          resumenPagos.SALDO_PENDIENTE
+        ).toFixed(2)}`
+      );
+    }
+
+    await registrarPagoReparacion(
+      reparacionPagos.IDREPARACION,
+      {
+        monto,
+        metodoPago,
+        observaciones:
+          observacionPago.trim() || null,
+      }
+    );
+
+    await recargarPagos();
+
+    setMontoPago("");
+    setMetodoPago("EFECTIVO");
+    setObservacionPago("");
+  } catch (errorGuardado) {
+    setError(errorGuardado.message);
+  } finally {
+    setGuardando(false);
+  }
+}
+
+  async function eliminarPago(pago) {
+    const confirmar = window.confirm(
+      `¿Deseas anular el pago de S/ ${Number(
+        pago.MONTO
+      ).toFixed(2)}?`
+    );
+
+    if (!confirmar) return;
+
+    try {
+      setGuardando(true);
+      setError("");
+
+      await anularPagoReparacion(
+        reparacionPagos.IDREPARACION,
+        pago.IDPAGO
+      );
+
+      await recargarPagos();
+    } catch (errorEliminar) {
+      setError(errorEliminar.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   return (
     <section>
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -623,6 +759,13 @@ async function guardarRepuesto(evento) {
 
                     <td className="py-4">
                       <div className="flex justify-end gap-2">
+                          <button
+                          onClick={() => abrirPagos(reparacion)}
+                          title="Administrar pagos"
+                          className="rounded-lg bg-purple-50 p-2 text-purple-700 hover:bg-purple-100"
+                        >
+                          <Wallet size={18} />
+                        </button>
                         <button
                           onClick={() => abrirRepuestos(reparacion)}
                           title="Administrar repuestos"
@@ -716,6 +859,31 @@ async function guardarRepuesto(evento) {
             setModalRepuestos(false);
             setReparacionRepuestos(null);
             setRepuestosUsados([]);
+            setError("");
+          }}
+        />
+      )}
+        {modalPagos && (
+        <ModalPagos
+          reparacion={reparacionPagos}
+          resumen={resumenPagos}
+          pagos={pagos}
+          monto={montoPago}
+          setMonto={setMontoPago}
+          metodo={metodoPago}
+          setMetodo={setMetodoPago}
+          observacion={observacionPago}
+          setObservacion={setObservacionPago}
+          cargando={cargandoPagos}
+          guardando={guardando}
+          error={error}
+          guardar={guardarPago}
+          eliminar={eliminarPago}
+          cerrar={() => {
+            setModalPagos(false);
+            setReparacionPagos(null);
+            setResumenPagos(null);
+            setPagos([]);
             setError("");
           }}
         />
@@ -1221,6 +1389,349 @@ function ModalRepuestos({
   );
 }
 
+function ModalPagos({
+  reparacion,
+  resumen,
+  pagos,
+  monto,
+  setMonto,
+  metodo,
+  setMetodo,
+  observacion,
+  setObservacion,
+  cargando,
+  guardando,
+  error,
+  guardar,
+  eliminar,
+  cerrar,
+}) {
+  const estadoPago =
+    resumen?.ESTADO_PAGO || "PENDIENTE";
+
+  const claseEstado =
+    estadoPago === "PAGADO"
+      ? "bg-green-100 text-green-700"
+      : estadoPago === "PARCIAL"
+        ? "bg-amber-100 text-amber-700"
+        : estadoPago === "SIN COSTO"
+          ? "bg-gray-100 text-gray-700"
+          : "bg-red-100 text-red-700";
+
+  const saldoPendiente = Number(
+    resumen?.SALDO_PENDIENTE || 0
+  );
+
+  const puedeRegistrarPago =
+    saldoPendiente > 0 &&
+    estadoPago !== "PAGADO";
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4">
+      <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white">
+        <div className="flex items-center justify-between border-b px-7 py-5">
+          <div>
+            <h2 className="text-2xl font-bold">
+              Pagos de reparación
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              {reparacion?.CODIGO} —{" "}
+              {reparacion?.CLIENTE}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={cerrar}
+            className="rounded-lg p-2 hover:bg-gray-100"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        {cargando ? (
+          <div className="flex justify-center py-20">
+            <LoaderCircle
+              size={38}
+              className="animate-spin text-red-700"
+            />
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-4 border-b p-7 sm:grid-cols-2 xl:grid-cols-4">
+              <ResumenPago
+                titulo="Total"
+                valor={resumen?.TOTAL_REPARACION}
+              />
+
+              <ResumenPago
+                titulo="Pagado"
+                valor={resumen?.TOTAL_PAGADO}
+              />
+
+              <ResumenPago
+                titulo="Saldo"
+                valor={resumen?.SALDO_PENDIENTE}
+              />
+
+              <article className="rounded-2xl bg-gray-50 p-5">
+                <p className="text-sm text-gray-500">
+                  Estado
+                </p>
+
+                <span
+                  className={`mt-3 inline-flex rounded-full px-3 py-1 text-sm font-semibold ${claseEstado}`}
+                >
+                  {estadoPago}
+                </span>
+              </article>
+            </div>
+
+            {puedeRegistrarPago ? (
+              <form
+                onSubmit={guardar}
+                className="grid gap-4 border-b p-7 md:grid-cols-2 xl:grid-cols-[160px_220px_1fr_auto]"
+              >
+                <label>
+                  <span className="mb-2 block text-sm font-semibold">
+                    Monto *
+                  </span>
+
+                  <input
+                    type="number"
+                    min="0.01"
+                    max={saldoPendiente}
+                    step="0.01"
+                    value={monto}
+                    onChange={(evento) => {
+                      const valor =
+                        evento.target.value;
+
+                      if (
+                        /^\d{0,8}(\.\d{0,2})?$/.test(
+                          valor
+                        )
+                      ) {
+                        setMonto(valor);
+                      }
+                    }}
+                    required
+                    placeholder="0.00"
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3"
+                  />
+                </label>
+
+                <label>
+                  <span className="mb-2 block text-sm font-semibold">
+                    Método de pago *
+                  </span>
+
+                  <select
+                    value={metodo}
+                    onChange={(evento) =>
+                      setMetodo(evento.target.value)
+                    }
+                    required
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3"
+                  >
+                    <option value="EFECTIVO">
+                      Efectivo
+                    </option>
+                    <option value="YAPE">
+                      Yape
+                    </option>
+                    <option value="PLIN">
+                      Plin
+                    </option>
+                    <option value="TRANSFERENCIA">
+                      Transferencia
+                    </option>
+                    <option value="TARJETA">
+                      Tarjeta
+                    </option>
+                  </select>
+                </label>
+
+                <label>
+                  <span className="mb-2 block text-sm font-semibold">
+                    Observación
+                  </span>
+
+                  <input
+                    value={observacion}
+                    onChange={(evento) =>
+                      setObservacion(
+                        evento.target.value.slice(
+                          0,
+                          300
+                        )
+                      )
+                    }
+                    maxLength={300}
+                    placeholder="Ejemplo: adelanto del cliente"
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3"
+                  />
+                </label>
+
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    disabled={guardando}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-700 px-5 py-3 font-semibold text-white hover:bg-purple-800 disabled:opacity-60"
+                  >
+                    {guardando ? (
+                      <LoaderCircle
+                        size={19}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <CircleDollarSign size={19} />
+                    )}
+
+                    Registrar
+                  </button>
+                </div>
+
+                {error && (
+                  <div className="rounded-xl bg-red-50 p-4 text-red-700 md:col-span-2 xl:col-span-4">
+                    {error}
+                  </div>
+                )}
+              </form>
+            ) : (
+              <div className="border-b p-7">
+                <div className="rounded-xl bg-green-50 p-4 text-green-700">
+                  {estadoPago === "PAGADO"
+                    ? "La reparación ya se encuentra pagada completamente."
+                    : "Primero registra un costo en la reparación para poder agregar pagos."}
+                </div>
+
+                {error && (
+                  <div className="mt-4 rounded-xl bg-red-50 p-4 text-red-700">
+                    {error}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="p-7">
+              <div className="mb-5 flex items-center gap-2">
+                <Wallet
+                  size={21}
+                  className="text-purple-700"
+                />
+
+                <h3 className="text-lg font-bold">
+                  Historial de pagos
+                </h3>
+              </div>
+
+              {pagos.length === 0 ? (
+                <div className="rounded-xl bg-gray-50 py-12 text-center text-gray-500">
+                  No se han registrado pagos.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[850px]">
+                    <thead>
+                      <tr className="border-b text-left text-sm text-gray-500">
+                        <th className="pb-3">
+                          Fecha
+                        </th>
+                        <th className="pb-3">
+                          Monto
+                        </th>
+                        <th className="pb-3">
+                          Método
+                        </th>
+                        <th className="pb-3">
+                          Observación
+                        </th>
+                        <th className="pb-3">
+                          Usuario
+                        </th>
+                        <th className="pb-3 text-right">
+                          Acción
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {pagos.map((pago) => (
+                        <tr
+                          key={pago.IDPAGO}
+                          className="border-b border-gray-100"
+                        >
+                          <td className="py-4">
+                            {formatearFechaHora(
+                              pago.FECHA_PAGO
+                            )}
+                          </td>
+
+                          <td className="py-4 font-semibold">
+                            S/{" "}
+                            {Number(
+                              pago.MONTO
+                            ).toFixed(2)}
+                          </td>
+
+                          <td className="py-4">
+                            <span className="rounded-full bg-purple-100 px-3 py-1 text-sm font-semibold text-purple-700">
+                              {pago.METODO_PAGO}
+                            </span>
+                          </td>
+
+                          <td className="py-4">
+                            {pago.OBSERVACIONES ||
+                              "Sin observación"}
+                          </td>
+
+                          <td className="py-4">
+                            {pago.USUARIO}
+                          </td>
+
+                          <td className="py-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                eliminar(pago)
+                              }
+                              disabled={guardando}
+                              title="Anular pago"
+                              className="rounded-lg bg-red-50 p-2 text-red-700 hover:bg-red-100 disabled:opacity-50"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ResumenPago({ titulo, valor }) {
+  return (
+    <article className="rounded-2xl bg-gray-50 p-5">
+      <p className="text-sm text-gray-500">
+        {titulo}
+      </p>
+
+      <p className="mt-2 text-2xl font-bold text-gray-900">
+        S/ {Number(valor || 0).toFixed(2)}
+      </p>
+    </article>
+  );
+}
+
 function Campo({
   label,
   name,
@@ -1291,6 +1802,15 @@ function formatearFecha(fecha) {
   return new Intl.DateTimeFormat("es-PE").format(
     new Date(fecha)
   );
+}
+
+function formatearFechaHora(fecha) {
+  if (!fecha) return "Sin fecha";
+
+  return new Intl.DateTimeFormat("es-PE", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(fecha));
 }
 
 function formatearInputFecha(fecha) {

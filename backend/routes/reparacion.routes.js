@@ -49,6 +49,21 @@ router.delete(
 );
 
 router.get(
+  "/:id/pagos",
+  ReparacionController.obtenerPagos
+);
+
+router.post(
+  "/:id/pagos",
+  ReparacionController.registrarPago
+);
+
+router.delete(
+  "/:id/pagos/:idPago",
+  ReparacionController.anularPago
+);
+
+router.get(
   "/",
   ReparacionController.obtenerTodos
 );

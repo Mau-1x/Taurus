@@ -559,6 +559,216 @@ static async agregarRepuesto(req, res) {
     }
   }
 
+    static async obtenerPagos(req, res) {
+    try {
+      const idReparacion = Number(req.params.id);
+
+      if (
+        !Number.isInteger(idReparacion) ||
+        idReparacion <= 0
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "La reparación no es válida",
+        });
+      }
+
+      const resumen =
+        await ReparacionModel.obtenerResumenPagos(
+          idReparacion
+        );
+
+      if (!resumen) {
+        return res.status(404).json({
+          ok: false,
+          message: "Reparación no encontrada",
+        });
+      }
+
+      const pagos =
+        await ReparacionModel.obtenerPagos(
+          idReparacion
+        );
+
+      return res.json({
+        ok: true,
+        data: {
+          resumen,
+          pagos,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "Error obteniendo pagos:",
+        error
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message:
+          "No se pudieron obtener los pagos",
+      });
+    }
+  }
+
+  static async registrarPago(req, res) {
+    try {
+      const idReparacion = Number(req.params.id);
+      const monto = Number(req.body.monto);
+
+      const metodoPago = String(
+        req.body.metodoPago || ""
+      )
+        .trim()
+        .toUpperCase();
+
+      const observaciones =
+        req.body.observaciones?.trim() || null;
+
+      if (
+        !Number.isInteger(idReparacion) ||
+        idReparacion <= 0
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "La reparación no es válida",
+        });
+      }
+
+      if (
+        !Number.isFinite(monto) ||
+        monto <= 0 ||
+        monto > 99999999.99
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "El monto del pago no es válido",
+        });
+      }
+
+      const metodosPermitidos = [
+        "EFECTIVO",
+        "YAPE",
+        "PLIN",
+        "TRANSFERENCIA",
+        "TARJETA",
+      ];
+
+      if (!metodosPermitidos.includes(metodoPago)) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "El método de pago seleccionado no es válido",
+        });
+      }
+
+      if (
+        observaciones &&
+        observaciones.length > 300
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "Las observaciones no pueden superar los 300 caracteres",
+        });
+      }
+
+      const pago =
+        await ReparacionModel.registrarPago(
+          idReparacion,
+          req.usuario.idUsuario,
+          {
+            monto,
+            metodoPago,
+            observaciones,
+          }
+        );
+
+      const resumen =
+        await ReparacionModel.obtenerResumenPagos(
+          idReparacion
+        );
+
+      return res.status(201).json({
+        ok: true,
+        message: "Pago registrado correctamente",
+        data: {
+          pago,
+          resumen,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "Error registrando pago:",
+        error
+      );
+
+      return res
+        .status(error.statusCode || 500)
+        .json({
+          ok: false,
+          message:
+            error.message ||
+            "No se pudo registrar el pago",
+        });
+    }
+  }
+
+  static async anularPago(req, res) {
+    try {
+      const idReparacion = Number(req.params.id);
+      const idPago = Number(req.params.idPago);
+
+      if (
+        !Number.isInteger(idReparacion) ||
+        idReparacion <= 0 ||
+        !Number.isInteger(idPago) ||
+        idPago <= 0
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La reparación o el pago no son válidos",
+        });
+      }
+
+      const anulado =
+        await ReparacionModel.anularPago(
+          idReparacion,
+          idPago
+        );
+
+      if (!anulado) {
+        return res.status(404).json({
+          ok: false,
+          message:
+            "El pago no existe o ya fue anulado",
+        });
+      }
+
+      const resumen =
+        await ReparacionModel.obtenerResumenPagos(
+          idReparacion
+        );
+
+      return res.json({
+        ok: true,
+        message: "Pago anulado correctamente",
+        data: resumen,
+      });
+    } catch (error) {
+      console.error(
+        "Error anulando pago:",
+        error
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message: "No se pudo anular el pago",
+      });
+    }
+  }
+
   static async obtenerHistorial(req, res) {
     try {
       const historial = await ReparacionModel.obtenerHistorial(
