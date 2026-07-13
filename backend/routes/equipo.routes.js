@@ -9,6 +9,10 @@ const {
   permitirRoles,
 } = require("../middlewares/auth.middleware");
 
+const upload = require(
+  "../middlewares/upload.middleware"
+);
+
 const router = express.Router();
 
 router.use(
@@ -28,6 +32,22 @@ router.get("/", EquipoController.obtenerTodos);
 router.get(
   "/cliente/:idCliente",
   EquipoController.obtenerPorCliente
+);
+
+router.get(
+  "/:id/fotos",
+  EquipoController.obtenerFotos
+);
+
+router.post(
+  "/:id/fotos",
+  upload.single("foto"),
+  EquipoController.subirFoto
+);
+
+router.delete(
+  "/:id/fotos/:idFoto",
+  EquipoController.eliminarFoto
 );
 
 router.get("/:id", EquipoController.obtenerPorId);

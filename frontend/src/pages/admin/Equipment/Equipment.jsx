@@ -7,6 +7,9 @@ import {
   X,
   LoaderCircle,
   Smartphone,
+  Camera,
+  ImagePlus,
+  ExternalLink,
 } from "lucide-react";
 
 import { obtenerClientes } from "../../../services/clienteService";
@@ -18,6 +21,9 @@ import {
   crearEquipo,
   actualizarEquipo,
   eliminarEquipo,
+  obtenerFotosEquipo,
+  subirFotoEquipo,
+  eliminarFotoEquipo,
 } from "../../../services/equipoService";
 
 const formularioInicial = {
@@ -41,6 +47,32 @@ function Equipment() {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [equipoEditando, setEquipoEditando] = useState(null);
   const [formulario, setFormulario] = useState(formularioInicial);
+
+  const [modalFotos, setModalFotos] =
+    useState(false);
+
+  const [equipoFotos, setEquipoFotos] =
+    useState(null);
+
+  const [fotos, setFotos] = useState([]);
+
+  const [archivoFoto, setArchivoFoto] =
+    useState(null);
+
+  const [tipoFoto, setTipoFoto] =
+    useState("FRONTAL");
+
+  const [descripcionFoto, setDescripcionFoto] =
+    useState("");
+
+  const [cargandoFotos, setCargandoFotos] =
+    useState(false);
+
+  const [subiendoFoto, setSubiendoFoto] =
+    useState(false);
+
+  const [imagenAmpliada, setImagenAmpliada] =
+    useState(null);
 
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -260,6 +292,131 @@ function Equipment() {
     }
   }
 
+  async function abrirFotos(equipo) {
+    try {
+      setEquipoFotos(equipo);
+      setModalFotos(true);
+      setCargandoFotos(true);
+      setError("");
+      setArchivoFoto(null);
+      setTipoFoto("FRONTAL");
+      setDescripcionFoto("");
+
+      const datos = await obtenerFotosEquipo(
+        equipo.IDEQUIPO
+      );
+
+      setFotos(datos);
+    } catch (errorCarga) {
+      setError(errorCarga.message);
+    } finally {
+      setCargandoFotos(false);
+    }
+  }
+
+  async function recargarFotos() {
+    const datos = await obtenerFotosEquipo(
+      equipoFotos.IDEQUIPO
+    );
+
+    setFotos(datos);
+  }
+
+  async function guardarFoto(evento) {
+    evento.preventDefault();
+
+    try {
+      setSubiendoFoto(true);
+      setError("");
+
+      if (!archivoFoto) {
+        throw new Error(
+          "Selecciona una imagen"
+        );
+      }
+
+      const tiposPermitidos = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+      ];
+
+      if (
+        !tiposPermitidos.includes(
+          archivoFoto.type
+        )
+      ) {
+        throw new Error(
+          "Solo se permiten imágenes JPG, PNG o WEBP"
+        );
+      }
+
+      if (
+        archivoFoto.size >
+        5 * 1024 * 1024
+      ) {
+        throw new Error(
+          "La imagen no puede superar los 5 MB"
+        );
+      }
+
+      if (descripcionFoto.length > 300) {
+        throw new Error(
+          "La descripción no puede superar los 300 caracteres"
+        );
+      }
+
+      await subirFotoEquipo(
+        equipoFotos.IDEQUIPO,
+        {
+          foto: archivoFoto,
+          tipoFoto,
+          descripcion:
+            descripcionFoto.trim() || null,
+        }
+      );
+
+      await recargarFotos();
+
+      setArchivoFoto(null);
+      setTipoFoto("FRONTAL");
+      setDescripcionFoto("");
+
+      const input = document.getElementById(
+        "archivo-foto-equipo"
+      );
+
+      if (input) {
+        input.value = "";
+      }
+    } catch (errorSubida) {
+      setError(errorSubida.message);
+    } finally {
+      setSubiendoFoto(false);
+    }
+  }
+
+  async function borrarFoto(foto) {
+    const confirmar = window.confirm(
+      "¿Deseas eliminar esta foto?"
+    );
+
+    if (!confirmar) return;
+
+    try {
+      setError("");
+
+      await eliminarFotoEquipo(
+        equipoFotos.IDEQUIPO,
+        foto.IDFOTO
+      );
+
+      await recargarFotos();
+    } catch (errorEliminar) {
+      setError(errorEliminar.message);
+    }
+  }
+
   return (
     <section>
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -372,7 +529,16 @@ function Equipment() {
                     <td className="py-4">
                       <div className="flex justify-end gap-2">
                         <button
+                          onClick={() => abrirFotos(equipo)}
+                          title="Fotos del equipo"
+                          className="rounded-lg bg-green-50 p-2 text-green-700 hover:bg-green-100"
+                        >
+                          <Camera size={18} />
+                        </button>
+
+                        <button
                           onClick={() => abrirEditar(equipo)}
+                          title="Editar equipo"
                           className="rounded-lg bg-blue-50 p-2 text-blue-700"
                         >
                           <Pencil size={18} />
@@ -380,6 +546,7 @@ function Equipment() {
 
                         <button
                           onClick={() => manejarEliminar(equipo)}
+                          title="Eliminar equipo"
                           className="rounded-lg bg-red-50 p-2 text-red-700"
                         >
                           <Trash2 size={18} />
@@ -566,7 +733,324 @@ function Equipment() {
           </div>
         </div>
       )}
+                {modalFotos && (
+                  <ModalFotosEquipo
+                    equipo={equipoFotos}
+                    fotos={fotos}
+                    archivo={archivoFoto}
+                    setArchivo={setArchivoFoto}
+                    tipoFoto={tipoFoto}
+                    setTipoFoto={setTipoFoto}
+                    descripcion={descripcionFoto}
+                    setDescripcion={setDescripcionFoto}
+                    cargando={cargandoFotos}
+                    subiendo={subiendoFoto}
+                    error={error}
+                    guardar={guardarFoto}
+                    eliminar={borrarFoto}
+                    ampliar={setImagenAmpliada}
+                    cerrar={() => {
+                      setModalFotos(false);
+                      setEquipoFotos(null);
+                      setFotos([]);
+                      setArchivoFoto(null);
+                      setError("");
+                    }}
+                  />
+                )}
+
+                {imagenAmpliada && (
+                  <div
+                    onClick={() => setImagenAmpliada(null)}
+                    className="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 p-5"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setImagenAmpliada(null)}
+                      className="absolute right-5 top-5 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
+                    >
+                      <X size={28} />
+                    </button>
+
+                    <img
+                      src={imagenAmpliada}
+                      alt="Foto ampliada del equipo"
+                      onClick={(evento) =>
+                        evento.stopPropagation()
+                      }
+                      className="max-h-[90vh] max-w-full rounded-2xl object-contain"
+                    />
+                  </div>
+                )}
     </section>
+  );
+}
+
+function ModalFotosEquipo({
+  equipo,
+  fotos,
+  archivo,
+  setArchivo,
+  tipoFoto,
+  setTipoFoto,
+  descripcion,
+  setDescripcion,
+  cargando,
+  subiendo,
+  error,
+  guardar,
+  eliminar,
+  ampliar,
+  cerrar,
+}) {
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4">
+      <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white">
+        <div className="flex items-center justify-between border-b px-7 py-5">
+          <div>
+            <h2 className="text-2xl font-bold">
+              Fotos del equipo
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              {equipo?.MARCA}{" "}
+              {equipo?.MODELO} —{" "}
+              {equipo?.CLIENTE}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={cerrar}
+            className="rounded-lg p-2 hover:bg-gray-100"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <form
+          onSubmit={guardar}
+          className="grid gap-5 border-b p-7 md:grid-cols-2"
+        >
+          <label>
+            <span className="mb-2 block text-sm font-semibold">
+              Tipo de foto *
+            </span>
+
+            <select
+              value={tipoFoto}
+              onChange={(evento) =>
+                setTipoFoto(evento.target.value)
+              }
+              required
+              className="w-full rounded-xl border border-gray-300 px-4 py-3"
+            >
+              <option value="FRONTAL">
+                Frontal
+              </option>
+
+              <option value="POSTERIOR">
+                Posterior
+              </option>
+
+              <option value="PANTALLA">
+                Pantalla
+              </option>
+
+              <option value="DANO">
+                Daño existente
+              </option>
+
+              <option value="OTRA">
+                Otra
+              </option>
+            </select>
+          </label>
+
+          <label>
+            <span className="mb-2 block text-sm font-semibold">
+              Imagen *
+            </span>
+
+            <input
+              id="archivo-foto-equipo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(evento) =>
+                setArchivo(
+                  evento.target.files?.[0] ||
+                    null
+                )
+              }
+              required
+              className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-sm"
+            />
+
+            {archivo && (
+              <p className="mt-2 text-xs text-gray-500">
+                {archivo.name} —{" "}
+                {(
+                  archivo.size /
+                  1024 /
+                  1024
+                ).toFixed(2)}{" "}
+                MB
+              </p>
+            )}
+          </label>
+
+          <label className="md:col-span-2">
+            <span className="mb-2 block text-sm font-semibold">
+              Descripción
+            </span>
+
+            <textarea
+              value={descripcion}
+              onChange={(evento) =>
+                setDescripcion(
+                  evento.target.value.slice(
+                    0,
+                    300
+                  )
+                )
+              }
+              rows="3"
+              maxLength={300}
+              placeholder="Ejemplo: golpe en la esquina superior derecha"
+              className="w-full rounded-xl border border-gray-300 px-4 py-3"
+            />
+
+            <p className="mt-1 text-right text-xs text-gray-500">
+              {descripcion.length}/300
+            </p>
+          </label>
+
+          {error && (
+            <div className="rounded-xl bg-red-50 p-4 text-red-700 md:col-span-2">
+              {error}
+            </div>
+          )}
+
+          <div className="flex justify-end md:col-span-2">
+            <button
+              type="submit"
+              disabled={subiendo}
+              className="flex items-center gap-2 rounded-xl bg-green-700 px-6 py-3 font-semibold text-white hover:bg-green-800 disabled:opacity-60"
+            >
+              {subiendo ? (
+                <LoaderCircle
+                  size={19}
+                  className="animate-spin"
+                />
+              ) : (
+                <ImagePlus size={19} />
+              )}
+
+              {subiendo
+                ? "Subiendo..."
+                : "Subir foto"}
+            </button>
+          </div>
+        </form>
+
+        <div className="p-7">
+          <div className="mb-5 flex items-center justify-between">
+            <h3 className="text-lg font-bold">
+              Evidencias registradas
+            </h3>
+
+            <span className="text-sm text-gray-500">
+              {fotos.length} fotos
+            </span>
+          </div>
+
+          {cargando ? (
+            <div className="flex justify-center py-16">
+              <LoaderCircle
+                size={38}
+                className="animate-spin text-red-700"
+              />
+            </div>
+          ) : fotos.length === 0 ? (
+            <div className="rounded-2xl bg-gray-50 py-16 text-center text-gray-500">
+              No se han registrado fotos.
+            </div>
+          ) : (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {fotos.map((foto) => (
+                <article
+                  key={foto.IDFOTO}
+                  className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      ampliar(foto.URL_FOTO)
+                    }
+                    className="group relative block h-52 w-full overflow-hidden bg-gray-100"
+                  >
+                    <img
+                      src={foto.URL_FOTO}
+                      alt={
+                        foto.DESCRIPCION ||
+                        foto.TIPO_FOTO
+                      }
+                      loading="lazy"
+                      className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                    />
+
+                    <span className="absolute right-3 top-3 rounded-lg bg-black/60 p-2 text-white">
+                      <ExternalLink size={17} />
+                    </span>
+                  </button>
+
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                          {formatearTipoFoto(
+                            foto.TIPO_FOTO
+                          )}
+                        </span>
+
+                        <p className="mt-3 text-sm text-gray-600">
+                          {foto.DESCRIPCION ||
+                            "Sin descripción"}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          eliminar(foto)
+                        }
+                        title="Eliminar foto"
+                        className="rounded-lg bg-red-50 p-2 text-red-700 hover:bg-red-100"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+
+                    <div className="mt-4 border-t pt-3 text-xs text-gray-500">
+                      <p>
+                        Subida por:{" "}
+                        {foto.USUARIO}
+                      </p>
+
+                      <p className="mt-1">
+                        {formatearFechaHora(
+                          foto.FECHA_REGISTRO
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -630,6 +1114,27 @@ function CampoSelect({
       </select>
     </label>
   );
+}
+
+function formatearTipoFoto(tipo) {
+  const nombres = {
+    FRONTAL: "Frontal",
+    POSTERIOR: "Posterior",
+    PANTALLA: "Pantalla",
+    DANO: "Daño existente",
+    OTRA: "Otra",
+  };
+
+  return nombres[tipo] || tipo;
+}
+
+function formatearFechaHora(fecha) {
+  if (!fecha) return "Sin fecha";
+
+  return new Intl.DateTimeFormat("es-PE", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(fecha));
 }
 
 export default Equipment;

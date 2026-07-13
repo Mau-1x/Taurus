@@ -1,4 +1,38 @@
 const EquipoModel = require("../models/equipo.model");
+const cloudinary = require("../config/cloudinary");
+
+function subirImagenCloudinary(
+  buffer,
+  idEquipo
+) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: `taurus/equipos/${idEquipo}`,
+        resource_type: "image",
+        transformation: [
+          {
+            width: 1600,
+            height: 1600,
+            crop: "limit",
+            quality: "auto",
+            fetch_format: "auto",
+          },
+        ],
+      },
+      (error, resultado) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve(resultado);
+      }
+    );
+
+    stream.end(buffer);
+  });
+}
 
 function validarEquipo(datos) {
   const {
@@ -277,6 +311,224 @@ class EquipoController {
         ok: false,
         message: "No se pudo eliminar el equipo",
         error: error.message,
+      });
+    }
+  }
+
+    static async obtenerFotos(req, res) {
+    try {
+      const idEquipo = Number(req.params.id);
+
+      if (
+        !Number.isInteger(idEquipo) ||
+        idEquipo <= 0
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "El equipo no es válido",
+        });
+      }
+
+      const equipo =
+        await EquipoModel.obtenerPorId(idEquipo);
+
+      if (!equipo) {
+        return res.status(404).json({
+          ok: false,
+          message: "Equipo no encontrado",
+        });
+      }
+
+      const fotos =
+        await EquipoModel.obtenerFotos(idEquipo);
+
+      return res.json({
+        ok: true,
+        total: fotos.length,
+        data: fotos,
+      });
+    } catch (error) {
+      console.error(
+        "Error obteniendo fotos:",
+        error
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message:
+          "No se pudieron obtener las fotos",
+      });
+    }
+  }
+
+  static async subirFoto(req, res) {
+    try {
+      const idEquipo = Number(req.params.id);
+
+      const tipoFoto = String(
+        req.body.tipoFoto || ""
+      )
+        .trim()
+        .toUpperCase();
+
+      const descripcion =
+        req.body.descripcion?.trim() || null;
+
+      if (
+        !Number.isInteger(idEquipo) ||
+        idEquipo <= 0
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "El equipo no es válido",
+        });
+      }
+
+      const tiposPermitidos = [
+        "FRONTAL",
+        "POSTERIOR",
+        "PANTALLA",
+        "DANO",
+        "OTRA",
+      ];
+
+      if (!tiposPermitidos.includes(tipoFoto)) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "El tipo de foto seleccionado no es válido",
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          ok: false,
+          message: "Selecciona una imagen",
+        });
+      }
+
+      if (
+        descripcion &&
+        descripcion.length > 300
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La descripción no puede superar los 300 caracteres",
+        });
+      }
+
+      const equipo =
+        await EquipoModel.obtenerPorId(idEquipo);
+
+      if (!equipo) {
+        return res.status(404).json({
+          ok: false,
+          message: "Equipo no encontrado",
+        });
+      }
+
+      const imagen = await subirImagenCloudinary(
+        req.file.buffer,
+        idEquipo
+      );
+
+      try {
+        const foto = await EquipoModel.crearFoto({
+          idEquipo,
+          idUsuario: req.usuario.idUsuario,
+          tipoFoto,
+          urlFoto: imagen.secure_url,
+          publicId: imagen.public_id,
+          descripcion,
+        });
+
+        return res.status(201).json({
+          ok: true,
+          message: "Foto subida correctamente",
+          data: foto,
+        });
+      } catch (errorBaseDatos) {
+        await cloudinary.uploader.destroy(
+          imagen.public_id
+        );
+
+        throw errorBaseDatos;
+      }
+    } catch (error) {
+      console.error(
+        "Error subiendo foto:",
+        error
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message: "No se pudo subir la foto",
+      });
+    }
+  }
+
+  static async eliminarFoto(req, res) {
+    try {
+      const idEquipo = Number(req.params.id);
+      const idFoto = Number(req.params.idFoto);
+
+      if (
+        !Number.isInteger(idEquipo) ||
+        idEquipo <= 0 ||
+        !Number.isInteger(idFoto) ||
+        idFoto <= 0
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "El equipo o la foto no son válidos",
+        });
+      }
+
+      const foto =
+        await EquipoModel.obtenerFotoPorId(
+          idEquipo,
+          idFoto
+        );
+
+      if (!foto) {
+        return res.status(404).json({
+          ok: false,
+          message: "Foto no encontrada",
+        });
+      }
+
+      await cloudinary.uploader.destroy(
+        foto.PUBLIC_ID
+      );
+
+      const eliminada =
+        await EquipoModel.eliminarFoto(
+          idEquipo,
+          idFoto
+        );
+
+      if (!eliminada) {
+        return res.status(404).json({
+          ok: false,
+          message: "Foto no encontrada",
+        });
+      }
+
+      return res.json({
+        ok: true,
+        message: "Foto eliminada correctamente",
+      });
+    } catch (error) {
+      console.error(
+        "Error eliminando foto:",
+        error
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message: "No se pudo eliminar la foto",
       });
     }
   }

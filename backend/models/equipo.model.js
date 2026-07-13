@@ -218,6 +218,127 @@ class EquipoModel {
     return result.rowsAffected[0] > 0;
   }
 
+    static async obtenerFotos(idEquipo) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input("idEquipo", sql.Int, idEquipo)
+      .query(`
+        SELECT
+          f.IDFOTO,
+          f.IDEQUIPO,
+          f.IDUSUARIO,
+          f.TIPO_FOTO,
+          f.URL_FOTO,
+          f.PUBLIC_ID,
+          f.DESCRIPCION,
+          f.FECHA_REGISTRO,
+          u.NOMBRE AS USUARIO
+        FROM FOTO_EQUIPO f
+        INNER JOIN USUARIO u
+          ON f.IDUSUARIO = u.IDUSUARIO
+        WHERE f.IDEQUIPO = @idEquipo
+          AND f.ESTADO = 1
+        ORDER BY f.FECHA_REGISTRO DESC
+      `);
+
+    return result.recordset;
+  }
+
+  static async crearFoto(datos) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input("idEquipo", sql.Int, datos.idEquipo)
+      .input("idUsuario", sql.Int, datos.idUsuario)
+      .input(
+        "tipoFoto",
+        sql.VarChar(30),
+        datos.tipoFoto
+      )
+      .input(
+        "urlFoto",
+        sql.VarChar(500),
+        datos.urlFoto
+      )
+      .input(
+        "publicId",
+        sql.VarChar(250),
+        datos.publicId
+      )
+      .input(
+        "descripcion",
+        sql.VarChar(300),
+        datos.descripcion || null
+      )
+      .query(`
+        INSERT INTO FOTO_EQUIPO (
+          IDEQUIPO,
+          IDUSUARIO,
+          TIPO_FOTO,
+          URL_FOTO,
+          PUBLIC_ID,
+          DESCRIPCION
+        )
+        OUTPUT
+          INSERTED.IDFOTO,
+          INSERTED.URL_FOTO,
+          INSERTED.FECHA_REGISTRO
+        VALUES (
+          @idEquipo,
+          @idUsuario,
+          @tipoFoto,
+          @urlFoto,
+          @publicId,
+          @descripcion
+        )
+      `);
+
+    return result.recordset[0];
+  }
+
+  static async obtenerFotoPorId(idEquipo, idFoto) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input("idEquipo", sql.Int, idEquipo)
+      .input("idFoto", sql.Int, idFoto)
+      .query(`
+        SELECT
+          IDFOTO,
+          IDEQUIPO,
+          PUBLIC_ID,
+          URL_FOTO
+        FROM FOTO_EQUIPO
+        WHERE IDFOTO = @idFoto
+          AND IDEQUIPO = @idEquipo
+          AND ESTADO = 1
+      `);
+
+    return result.recordset[0] || null;
+  }
+
+  static async eliminarFoto(idEquipo, idFoto) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input("idEquipo", sql.Int, idEquipo)
+      .input("idFoto", sql.Int, idFoto)
+      .query(`
+        UPDATE FOTO_EQUIPO
+        SET ESTADO = 0
+        WHERE IDFOTO = @idFoto
+          AND IDEQUIPO = @idEquipo
+          AND ESTADO = 1
+      `);
+
+    return result.rowsAffected[0] > 0;
+  }
+
   static async obtenerMarcas() {
     const pool = await getConnection();
 
