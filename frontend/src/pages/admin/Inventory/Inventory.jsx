@@ -44,6 +44,33 @@ const formularioInicial = {
   imagen: "",
 };
 
+const detalleCelularInicial = {
+  condicion: "NUEVO",
+  ramGb: "",
+  almacenamientoGb: "",
+  color: "",
+  liberado: true,
+  bateriaPorcentaje: "",
+  garantiaDias: 30,
+};
+
+function normalizarTexto(valor) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function esCategoriaCelular(nombreCategoria) {
+  const nombre = normalizarTexto(nombreCategoria);
+
+  return (
+    nombre.includes("celular") ||
+    nombre.includes("smartphone") ||
+    nombre.includes("telefono")
+  );
+}
+
 function Inventory() {
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -74,6 +101,9 @@ function Inventory() {
   const [productoStock, setProductoStock] = useState(null);
 
   const [formulario, setFormulario] = useState(formularioInicial);
+  const [detalleCelular, setDetalleCelular] = useState(
+    detalleCelularInicial
+  );
 
   const [movimiento, setMovimiento] = useState({
     tipo: "ENTRADA",
@@ -98,6 +128,16 @@ function Inventory() {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  const categoriaSeleccionada = categorias.find(
+    (categoria) =>
+      String(categoria.IDCATEGORIA) ===
+      String(formulario.idCategoria)
+  );
+
+  const esCelularSeleccionado = esCategoriaCelular(
+    categoriaSeleccionada?.NOMBRE
+  );
 
   async function cargarDatos() {
     try {
@@ -185,6 +225,7 @@ function Inventory() {
   function abrirNuevo() {
     setProductoEditando(null);
     setFormulario(formularioInicial);
+    setDetalleCelular(detalleCelularInicial);
     setModelosPrincipales([]);
     setCompatibilidadesSeleccionadas([]);
     setBusquedaModeloCompatible("");
@@ -226,6 +267,23 @@ function Inventory() {
         stock: producto.STOCK || 0,
         stockMinimo: producto.STOCK_MINIMO ?? 2,
         imagen: producto.IMAGEN || "",
+      });
+
+      setDetalleCelular({
+        condicion: producto.CONDICION || "NUEVO",
+        ramGb: producto.RAM_GB ?? "",
+        almacenamientoGb:
+          producto.ALMACENAMIENTO_GB ?? "",
+        color: producto.COLOR || "",
+        liberado:
+          producto.LIBERADO === null ||
+          producto.LIBERADO === undefined
+            ? true
+            : Boolean(producto.LIBERADO),
+        bateriaPorcentaje:
+          producto.BATERIA_PORCENTAJE ?? "",
+        garantiaDias:
+          producto.GARANTIA_DIAS ?? 30,
       });
 
       setModalProducto(true);
@@ -281,6 +339,40 @@ function Inventory() {
     setFormulario((anterior) => ({
       ...anterior,
       [name]: value,
+    }));
+  }
+
+  function manejarCambioDetalle(evento) {
+    const { name, value } = evento.target;
+
+    if (name === "liberado") {
+      setDetalleCelular((anterior) => ({
+        ...anterior,
+        liberado: value === "true",
+      }));
+      return;
+    }
+
+    let nuevoValor = value;
+
+    if (
+      [
+        "ramGb",
+        "almacenamientoGb",
+        "bateriaPorcentaje",
+        "garantiaDias",
+      ].includes(name)
+    ) {
+      nuevoValor = value.replace(/\D/g, "").slice(0, 4);
+    }
+
+    if (name === "color") {
+      nuevoValor = value.slice(0, 50);
+    }
+
+    setDetalleCelular((anterior) => ({
+      ...anterior,
+      [name]: nuevoValor,
     }));
   }
 
@@ -393,6 +485,98 @@ function Inventory() {
         );
       }
 
+      let detalleCelularNormalizado = null;
+
+      if (esCelularSeleccionado) {
+        if (!formulario.idMarca || !formulario.idModelo) {
+          throw new Error(
+            "Para un celular debes seleccionar la marca y el modelo"
+          );
+        }
+
+        const ramGb = Number(detalleCelular.ramGb);
+        const almacenamientoGb = Number(
+          detalleCelular.almacenamientoGb
+        );
+        const bateriaPorcentaje =
+          detalleCelular.bateriaPorcentaje === ""
+            ? null
+            : Number(detalleCelular.bateriaPorcentaje);
+        const garantiaDias = Number(
+          detalleCelular.garantiaDias
+        );
+
+        if (
+          !["NUEVO", "SEMINUEVO", "USADO"].includes(
+            detalleCelular.condicion
+          )
+        ) {
+          throw new Error(
+            "Selecciona una condición válida para el celular"
+          );
+        }
+
+        if (
+          !Number.isInteger(ramGb) ||
+          ramGb < 1 ||
+          ramGb > 128
+        ) {
+          throw new Error(
+            "La memoria RAM debe estar entre 1 y 128 GB"
+          );
+        }
+
+        if (
+          !Number.isInteger(almacenamientoGb) ||
+          almacenamientoGb < 1 ||
+          almacenamientoGb > 4096
+        ) {
+          throw new Error(
+            "El almacenamiento debe estar entre 1 y 4096 GB"
+          );
+        }
+
+        if (
+          detalleCelular.color.trim().length < 2 ||
+          detalleCelular.color.trim().length > 50
+        ) {
+          throw new Error(
+            "El color debe tener entre 2 y 50 caracteres"
+          );
+        }
+
+        if (
+          bateriaPorcentaje !== null &&
+          (!Number.isInteger(bateriaPorcentaje) ||
+            bateriaPorcentaje < 0 ||
+            bateriaPorcentaje > 100)
+        ) {
+          throw new Error(
+            "La batería debe estar entre 0 y 100 %"
+          );
+        }
+
+        if (
+          !Number.isInteger(garantiaDias) ||
+          garantiaDias < 0 ||
+          garantiaDias > 3650
+        ) {
+          throw new Error(
+            "La garantía debe estar entre 0 y 3650 días"
+          );
+        }
+
+        detalleCelularNormalizado = {
+          condicion: detalleCelular.condicion,
+          ramGb,
+          almacenamientoGb,
+          color: detalleCelular.color.trim(),
+          liberado: detalleCelular.liberado,
+          bateriaPorcentaje,
+          garantiaDias,
+        };
+      }
+
       const datos = {
         ...formulario,
         idCategoria: Number(formulario.idCategoria),
@@ -406,6 +590,7 @@ function Inventory() {
         precioVenta,
         stock: Number(formulario.stock || 0),
         stockMinimo: Number(formulario.stockMinimo || 0),
+        detalleCelular: detalleCelularNormalizado,
       };
 
       let idProductoGuardado;
@@ -429,7 +614,9 @@ function Inventory() {
 
       await actualizarCompatibilidades(
         idProductoGuardado,
-        compatibilidadesSeleccionadas
+        esCelularSeleccionado
+          ? []
+          : compatibilidadesSeleccionadas
       );
 
       await cargarDatos();
@@ -758,12 +945,27 @@ function Inventory() {
 
               <tbody>
                 {productosFiltrados.map((producto) => {
-                  const compatibilidad =
-                    producto.MODELOS_COMPATIBLES ||
-                    [producto.MARCA, producto.MODELO]
-                      .filter(Boolean)
-                      .join(" ") ||
-                    "Universal";
+                  const esCelularProducto =
+                    Boolean(producto.CONDICION);
+
+                  const compatibilidad = esCelularProducto
+                    ? [
+                        producto.MARCA,
+                        producto.MODELO,
+                        producto.RAM_GB
+                          ? `${producto.RAM_GB} GB RAM`
+                          : null,
+                        producto.ALMACENAMIENTO_GB
+                          ? `${producto.ALMACENAMIENTO_GB} GB`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
+                    : producto.MODELOS_COMPATIBLES ||
+                      [producto.MARCA, producto.MODELO]
+                        .filter(Boolean)
+                        .join(" ") ||
+                      "Universal";
 
                   return (
                     <tr
@@ -908,6 +1110,8 @@ function Inventory() {
       {modalProducto && (
         <ModalProducto
           formulario={formulario}
+          detalleCelular={detalleCelular}
+          esCelular={esCelularSeleccionado}
           categorias={categorias}
           marcas={marcas}
           modelosPrincipales={modelosPrincipales}
@@ -930,6 +1134,7 @@ function Inventory() {
           guardando={guardando}
           error={error}
           manejarCambio={manejarCambio}
+          manejarCambioDetalle={manejarCambioDetalle}
           guardar={manejarGuardar}
           cerrar={() => setModalProducto(false)}
         />
@@ -1219,6 +1424,8 @@ function EstadoStock({ estado }) {
 
 function ModalProducto({
   formulario,
+  detalleCelular,
+  esCelular,
   categorias,
   marcas,
   modelosPrincipales,
@@ -1235,6 +1442,7 @@ function ModalProducto({
   guardando,
   error,
   manejarCambio,
+  manejarCambioDetalle,
   guardar,
   cerrar,
 }) {
@@ -1418,6 +1626,106 @@ function ModalProducto({
             />
           </label>
 
+          {esCelular && (
+            <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5 md:col-span-2">
+              <div>
+                <h3 className="font-bold text-gray-900">
+                  Ficha técnica del celular
+                </h3>
+
+                <p className="mt-1 text-sm text-gray-600">
+                  Estos datos aparecerán en el catálogo público.
+                </p>
+              </div>
+
+              <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                <Select
+                  label="Condición"
+                  name="condicion"
+                  value={detalleCelular.condicion}
+                  onChange={manejarCambioDetalle}
+                  required
+                >
+                  <option value="NUEVO">Nuevo</option>
+                  <option value="SEMINUEVO">Seminuevo</option>
+                  <option value="USADO">Usado</option>
+                </Select>
+
+                <Campo
+                  label="RAM (GB)"
+                  name="ramGb"
+                  type="number"
+                  value={detalleCelular.ramGb}
+                  onChange={manejarCambioDetalle}
+                  min="1"
+                  max="128"
+                  step="1"
+                  placeholder="Ejemplo: 8"
+                  required
+                />
+
+                <Campo
+                  label="Almacenamiento (GB)"
+                  name="almacenamientoGb"
+                  type="number"
+                  value={detalleCelular.almacenamientoGb}
+                  onChange={manejarCambioDetalle}
+                  min="1"
+                  max="4096"
+                  step="1"
+                  placeholder="Ejemplo: 256"
+                  required
+                />
+
+                <Campo
+                  label="Color"
+                  name="color"
+                  value={detalleCelular.color}
+                  onChange={manejarCambioDetalle}
+                  maxLength={50}
+                  placeholder="Ejemplo: Negro"
+                  required
+                />
+
+                <Select
+                  label="Estado de red"
+                  name="liberado"
+                  value={String(detalleCelular.liberado)}
+                  onChange={manejarCambioDetalle}
+                  required
+                >
+                  <option value="true">Liberado</option>
+                  <option value="false">No liberado</option>
+                </Select>
+
+                <Campo
+                  label="Batería (%)"
+                  name="bateriaPorcentaje"
+                  type="number"
+                  value={detalleCelular.bateriaPorcentaje}
+                  onChange={manejarCambioDetalle}
+                  min="0"
+                  max="100"
+                  step="1"
+                  placeholder="Opcional"
+                />
+
+                <Campo
+                  label="Garantía (días)"
+                  name="garantiaDias"
+                  type="number"
+                  value={detalleCelular.garantiaDias}
+                  onChange={manejarCambioDetalle}
+                  min="0"
+                  max="3650"
+                  step="1"
+                  required
+                />
+              </div>
+            </section>
+          )}
+
+          {!esCelular && (
           <section className="rounded-2xl border border-gray-200 bg-gray-50 p-5 md:col-span-2">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
@@ -1542,6 +1850,7 @@ function ModalProducto({
               )}
             </div>
           </section>
+          )}
 
           {error && (
             <div className="rounded-xl bg-red-50 p-4 text-red-700 md:col-span-2">
