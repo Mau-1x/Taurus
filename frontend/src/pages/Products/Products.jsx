@@ -977,9 +977,80 @@ function ModalProducto({
                 valor={compatibilidad}
               />
 
+              {esCelular && (
+                <>
+                  <DatoProducto
+                    titulo="Condición"
+                    valor={formatearCondicion(
+                      producto.CONDICION
+                    )}
+                  />
+
+                  <DatoProducto
+                    titulo="Memoria RAM"
+                    valor={
+                      producto.RAM_GB !== null &&
+                      producto.RAM_GB !== undefined
+                        ? `${producto.RAM_GB} GB`
+                        : "No especificada"
+                    }
+                  />
+
+                  <DatoProducto
+                    titulo="Almacenamiento"
+                    valor={
+                      producto.ALMACENAMIENTO_GB !==
+                        null &&
+                      producto.ALMACENAMIENTO_GB !==
+                        undefined
+                        ? `${producto.ALMACENAMIENTO_GB} GB`
+                        : "No especificado"
+                    }
+                  />
+
+                  <DatoProducto
+                    titulo="Color"
+                    valor={
+                      producto.COLOR ||
+                      "No especificado"
+                    }
+                  />
+
+                  <DatoProducto
+                    titulo="Estado de red"
+                    valor={formatearLiberado(
+                      producto.LIBERADO
+                    )}
+                  />
+
+                  <DatoProducto
+                    titulo="Batería"
+                    valor={
+                      producto.BATERIA_PORCENTAJE !==
+                        null &&
+                      producto.BATERIA_PORCENTAJE !==
+                        undefined
+                        ? `${producto.BATERIA_PORCENTAJE}%`
+                        : "No especificada"
+                    }
+                  />
+
+                  <DatoProducto
+                    titulo="Garantía"
+                    valor={formatearGarantia(
+                      producto.GARANTIA_DIAS
+                    )}
+                  />
+                </>
+              )}
+
               <DatoProducto
                 titulo="Disponibilidad"
-                valor={`${producto.STOCK} unidades`}
+                valor={`${producto.STOCK} ${
+                  Number(producto.STOCK) === 1
+                    ? "unidad"
+                    : "unidades"
+                }`}
               />
             </div>
 
@@ -1009,6 +1080,58 @@ function ModalProducto({
       </article>
     </div>
   );
+}
+
+function formatearCondicion(condicion) {
+  if (!condicion) {
+    return "No especificada";
+  }
+
+  const texto = String(condicion).toLowerCase();
+
+  return (
+    texto.charAt(0).toUpperCase() +
+    texto.slice(1)
+  );
+}
+
+function formatearLiberado(valor) {
+  if (
+    valor === null ||
+    valor === undefined
+  ) {
+    return "No especificado";
+  }
+
+  return [
+    true,
+    1,
+    "1",
+    "true",
+  ].includes(valor)
+    ? "Liberado"
+    : "No liberado";
+}
+
+function formatearGarantia(dias) {
+  if (
+    dias === null ||
+    dias === undefined
+  ) {
+    return "No especificada";
+  }
+
+  const cantidad = Number(dias);
+
+  if (cantidad === 0) {
+    return "Sin garantía";
+  }
+
+  if (cantidad === 1) {
+    return "1 día";
+  }
+
+  return `${cantidad} días`;
 }
 
 function DatoProducto({ titulo, valor }) {
