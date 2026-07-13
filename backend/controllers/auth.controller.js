@@ -1,6 +1,9 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const AuthModel = require("../models/auth.model");
+const {
+  registrarAuditoria,
+} = require("../utils/auditoria");
 
 function validarCorreo(correo) {
   return (
@@ -103,6 +106,20 @@ class AuthController {
         await AuthModel.buscarPorCorreo(correoNormalizado);
 
       if (!usuario) {
+        await registrarAuditoria({
+          req,
+          modulo: "AUTENTICACION",
+          accion: "INICIAR_SESION",
+          entidad: "USUARIO",
+          descripcion:
+            "Intento de inicio de sesión con correo no registrado",
+          datosNuevos: {
+            correo: correoNormalizado,
+            resultado: "FALLIDO",
+            motivo: "USUARIO_NO_ENCONTRADO",
+          },
+        });
+
         return res.status(401).json({
           ok: false,
           message: "Correo o contraseña incorrectos",
@@ -110,6 +127,22 @@ class AuthController {
       }
 
       if (!usuario.ESTADO) {
+        await registrarAuditoria({
+          req,
+          idUsuario: usuario.IDUSUARIO,
+          modulo: "AUTENTICACION",
+          accion: "INICIAR_SESION",
+          entidad: "USUARIO",
+          identidad: usuario.IDUSUARIO,
+          descripcion:
+            "Intento de inicio de sesión de un usuario inactivo",
+          datosNuevos: {
+            correo: usuario.CORREO,
+            resultado: "FALLIDO",
+            motivo: "USUARIO_INACTIVO",
+          },
+        });
+
         return res.status(403).json({
           ok: false,
           message: "El usuario se encuentra inactivo",
@@ -122,6 +155,22 @@ class AuthController {
       );
 
       if (!passwordCorrecta) {
+        await registrarAuditoria({
+          req,
+          idUsuario: usuario.IDUSUARIO,
+          modulo: "AUTENTICACION",
+          accion: "INICIAR_SESION",
+          entidad: "USUARIO",
+          identidad: usuario.IDUSUARIO,
+          descripcion:
+            "Intento de inicio de sesión con contraseña incorrecta",
+          datosNuevos: {
+            correo: usuario.CORREO,
+            resultado: "FALLIDO",
+            motivo: "CONTRASENA_INCORRECTA",
+          },
+        });
+
         return res.status(401).json({
           ok: false,
           message: "Correo o contraseña incorrectos",
@@ -143,6 +192,22 @@ class AuthController {
       await AuthModel.actualizarUltimoAcceso(
         usuario.IDUSUARIO
       );
+
+      await registrarAuditoria({
+        req,
+        idUsuario: usuario.IDUSUARIO,
+        modulo: "AUTENTICACION",
+        accion: "INICIAR_SESION",
+        entidad: "USUARIO",
+        identidad: usuario.IDUSUARIO,
+        descripcion:
+          "Inicio de sesión realizado correctamente",
+        datosNuevos: {
+          correo: usuario.CORREO,
+          rol: usuario.ROL,
+          resultado: "EXITOSO",
+        },
+      });
 
       return res.json({
         ok: true,
