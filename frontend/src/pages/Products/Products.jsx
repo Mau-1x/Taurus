@@ -894,18 +894,18 @@ function ModalProducto({
       onMouseDown={cerrar}
     >
       <article
-        className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white shadow-2xl"
+        className="max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white shadow-2xl"
         onMouseDown={(evento) =>
           evento.stopPropagation()
         }
       >
-        <header className="flex items-center justify-between border-b px-6 py-5">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-white/95 px-6 py-5 backdrop-blur md:px-8">
           <div>
             <p className="text-sm font-bold uppercase tracking-wider text-red-700">
               {producto.CODIGO}
             </p>
 
-            <h2 className="mt-1 text-2xl font-bold text-gray-900">
+            <h2 className="mt-1 text-2xl font-bold text-gray-900 md:text-3xl">
               {producto.NOMBRE}
             </h2>
           </div>
@@ -919,39 +919,74 @@ function ModalProducto({
           </button>
         </header>
 
-        <div className="grid gap-8 p-6 md:grid-cols-2">
-          <div className="flex min-h-[320px] items-center justify-center overflow-hidden rounded-2xl bg-gray-100">
-            {producto.IMAGEN ? (
-              <img
-                src={producto.IMAGEN}
-                alt={producto.NOMBRE}
-                className="h-full max-h-[430px] w-full object-contain"
-              />
-            ) : esCelular ? (
-              <Smartphone
-                size={80}
-                className="text-gray-300"
-              />
-            ) : (
-              <ImageOff
-                size={70}
-                className="text-gray-300"
-              />
-            )}
+        <div className="grid items-start gap-8 p-6 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:p-8">
+          <div className="md:sticky md:top-28">
+            <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-3xl border border-gray-200 bg-gray-50 p-5">
+              {producto.IMAGEN ? (
+                <img
+                  src={producto.IMAGEN}
+                  alt={producto.NOMBRE}
+                  className="h-full w-full object-contain"
+                />
+              ) : esCelular ? (
+                <Smartphone
+                  size={90}
+                  className="text-gray-300"
+                />
+              ) : (
+                <ImageOff
+                  size={80}
+                  className="text-gray-300"
+                />
+              )}
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Categoría
+                </p>
+                <p className="mt-1 font-bold text-gray-900">
+                  {producto.CATEGORIA}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Stock
+                </p>
+                <p className="mt-1 font-bold text-gray-900">
+                  {producto.STOCK}{" "}
+                  {Number(producto.STOCK) === 1
+                    ? "unidad"
+                    : "unidades"}
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-3 py-1 text-sm font-semibold text-white">
-              {esCelular && <Smartphone size={15} />}
-              {producto.CATEGORIA}
-            </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-3 py-1 text-sm font-semibold text-white">
+                {esCelular && <Smartphone size={15} />}
+                {producto.CATEGORIA}
+              </span>
+
+              {esCelular && producto.CONDICION && (
+                <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-bold text-red-700">
+                  {formatearCondicion(
+                    producto.CONDICION
+                  )}
+                </span>
+              )}
+            </div>
 
             <p className="mt-5 leading-7 text-gray-600">
               {producto.DESCRIPCION ||
                 "Producto disponible en Taurus."}
             </p>
 
-            <div className="mt-7 space-y-4 rounded-2xl bg-gray-50 p-5">
+            <div className="mt-7 grid gap-x-6 gap-y-0 rounded-2xl bg-gray-50 p-5 sm:grid-cols-2">
               <DatoProducto
                 titulo="Marca"
                 valor={
@@ -1054,27 +1089,29 @@ function ModalProducto({
               />
             </div>
 
-            <div className="mt-7">
-              <p className="text-sm text-gray-500">
-                Precio
-              </p>
+            <div className="mt-7 flex flex-col gap-5 rounded-2xl border border-gray-200 p-5 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-500">
+                  Precio
+                </p>
 
-              <p className="text-4xl font-bold text-red-700">
-                S/{" "}
-                {Number(
-                  producto.PRECIO_VENTA
-                ).toFixed(2)}
-              </p>
+                <p className="text-4xl font-bold text-red-700">
+                  S/{" "}
+                  {Number(
+                    producto.PRECIO_VENTA
+                  ).toFixed(2)}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={consultar}
+                className="flex items-center justify-center gap-2 rounded-xl bg-green-600 px-6 py-4 font-bold text-white transition hover:bg-green-700"
+              >
+                <MessageCircle size={21} />
+                Consultar por WhatsApp
+              </button>
             </div>
-
-            <button
-              type="button"
-              onClick={consultar}
-              className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-6 py-4 font-bold text-white transition hover:bg-green-700"
-            >
-              <MessageCircle size={21} />
-              Consultar por WhatsApp
-            </button>
           </div>
         </div>
       </article>
@@ -1136,12 +1173,12 @@ function formatearGarantia(dias) {
 
 function DatoProducto({ titulo, valor }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-gray-200 pb-3 last:border-0 last:pb-0">
+    <div className="flex min-w-0 items-start justify-between gap-4 border-b border-gray-200 py-3 sm:block">
       <span className="shrink-0 text-sm text-gray-500">
         {titulo}
       </span>
 
-      <span className="text-right font-semibold text-gray-900">
+      <span className="break-words text-right font-semibold text-gray-900 sm:mt-1 sm:block sm:text-left">
         {valor}
       </span>
     </div>
