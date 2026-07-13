@@ -275,7 +275,7 @@ function Products() {
   function consultarWhatsApp(producto = null) {
     if (!WHATSAPP_NUMBER) {
       window.alert(
-        "El número de WhatsApp todavía no está configurado."
+        "WhatsApp todavía no está disponible. Configura VITE_WHATSAPP_NUMBER en el frontend de Render."
       );
       return;
     }
@@ -748,13 +748,13 @@ function TarjetaProducto({
   );
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
-      <div className="relative flex h-56 items-center justify-center overflow-hidden bg-gray-100">
+    <article className="group flex h-full flex-col overflow-hidden rounded-[28px] border border-gray-200 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.06)] transition duration-300 hover:-translate-y-1.5 hover:border-red-200 hover:shadow-[0_18px_45px_rgba(15,23,42,0.13)]">
+      <div className="relative flex h-64 items-center justify-center overflow-hidden bg-gradient-to-b from-gray-50 to-gray-100 p-4">
         {producto.IMAGEN ? (
           <img
             src={producto.IMAGEN}
             alt={producto.NOMBRE}
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.04]"
             onError={(evento) => {
               evento.currentTarget.style.display =
                 "none";
@@ -788,19 +788,19 @@ function TarjetaProducto({
           )}
         </div>
 
-        <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-black/80 px-3 py-1 text-xs font-semibold text-white">
+        <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-gray-950/90 px-3 py-1.5 text-xs font-semibold text-white shadow-sm backdrop-blur">
           {esCelular && <Smartphone size={14} />}
           {producto.CATEGORIA}
         </span>
 
         {esCelular && (
-          <span className="absolute right-4 top-4 rounded-full bg-red-700 px-3 py-1 text-xs font-bold text-white">
+          <span className="absolute right-4 top-4 rounded-full bg-red-700 px-3 py-1.5 text-xs font-bold text-white shadow-sm">
             Equipo en venta
           </span>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-6">
+      <div className="flex flex-1 flex-col p-5 md:p-6">
         <p className="text-xs font-bold uppercase tracking-wider text-red-700">
           {producto.CODIGO}
         </p>
@@ -814,22 +814,22 @@ function TarjetaProducto({
             "Producto disponible en Taurus."}
         </p>
 
-        <div className="mt-4">
-          <p className="text-sm text-gray-500">
+        <div className="mt-5 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
             {esCelular
               ? "Marca y modelo"
               : "Compatibilidad"}
           </p>
 
           <p
-            className="line-clamp-2 font-semibold text-gray-800"
+            className="mt-1 line-clamp-2 font-semibold text-gray-900"
             title={compatibilidad}
           >
             {compatibilidad}
           </p>
         </div>
 
-        <div className="mt-6 flex items-end justify-between">
+        <div className="mt-auto flex items-end justify-between gap-3 pt-6">
           <div>
             <p className="text-sm text-gray-500">
               Precio
@@ -843,28 +843,31 @@ function TarjetaProducto({
             </p>
           </div>
 
-          <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
-            Stock: {producto.STOCK}
+          <span className="whitespace-nowrap rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-sm font-semibold text-green-700">
+            {producto.STOCK}{" "}
+            {Number(producto.STOCK) === 1
+              ? "unidad"
+              : "unidades"}
           </span>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="mt-5 space-y-3">
           <button
             type="button"
-            onClick={verDetalle}
-            className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-3 py-3 text-sm font-bold text-gray-700 transition hover:bg-gray-100"
+            onClick={consultar}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-green-700 hover:shadow-md"
           >
-            <Eye size={18} />
-            Ver detalles
+            <MessageCircle size={19} />
+            Consultar por WhatsApp
           </button>
 
           <button
             type="button"
-            onClick={consultar}
-            className="flex items-center justify-center gap-2 rounded-xl bg-green-600 px-3 py-3 text-sm font-bold text-white transition hover:bg-green-700"
+            onClick={verDetalle}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-700 transition hover:border-gray-400 hover:bg-gray-50"
           >
-            <MessageCircle size={18} />
-            Consultar
+            <Eye size={18} />
+            Ver ficha completa
           </button>
         </div>
       </div>
