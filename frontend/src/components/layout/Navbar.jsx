@@ -9,7 +9,13 @@ import {
   Search,
   Home,
   MessageCircle,
+  LayoutDashboard,
 } from "lucide-react";
+
+import {
+  estaAutenticado,
+  obtenerUsuario,
+} from "../../services/authService";
 
 const enlaces = [
   {
@@ -46,6 +52,10 @@ const enlaces = [
 
 function Navbar() {
   const [menuAbierto, setMenuAbierto] = useState(false);
+
+  const usuario = estaAutenticado()
+    ? obtenerUsuario()
+    : null;
 
   function cerrarMenu() {
     setMenuAbierto(false);
@@ -92,20 +102,28 @@ function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden lg:block">
-          <Link
-            to="/login"
-            className="rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold transition hover:border-red-600 hover:bg-red-700"
-          >
-            Acceso administrativo
-          </Link>
-        </div>
+        {/* Solo aparece cuando ya existe una sesión */}
+        {usuario && (
+          <div className="hidden lg:block">
+            <Link
+              to="/admin"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold transition hover:border-red-600 hover:bg-red-700"
+            >
+              <LayoutDashboard size={18} />
+              Ir al panel
+            </Link>
+          </div>
+        )}
 
         <button
           type="button"
-          onClick={() => setMenuAbierto((estado) => !estado)}
+          onClick={() =>
+            setMenuAbierto((estado) => !estado)
+          }
           aria-label={
-            menuAbierto ? "Cerrar menú" : "Abrir menú"
+            menuAbierto
+              ? "Cerrar menú"
+              : "Abrir menú"
           }
           className="rounded-xl border border-white/15 p-3 text-white transition hover:bg-white/10 lg:hidden"
         >
@@ -143,13 +161,17 @@ function Navbar() {
             })}
           </nav>
 
-          <Link
-            to="/login"
-            onClick={cerrarMenu}
-            className="mt-5 block rounded-xl border border-white/20 px-5 py-3 text-center font-semibold transition hover:bg-red-700"
-          >
-            Acceso administrativo
-          </Link>
+          {/* También oculto para visitantes en celular */}
+          {usuario && (
+            <Link
+              to="/admin"
+              onClick={cerrarMenu}
+              className="mt-5 flex items-center justify-center gap-2 rounded-xl border border-white/20 px-5 py-3 text-center font-semibold transition hover:bg-red-700"
+            >
+              <LayoutDashboard size={19} />
+              Ir al panel
+            </Link>
+          )}
         </div>
       )}
     </header>

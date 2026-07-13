@@ -11,10 +11,26 @@ const {
 
 const router = express.Router();
 
-// Rutas públicas
+/* PÚBLICAS: deben ir primero */
+
 router.get(
   "/categorias",
   ProductoController.obtenerCategorias
+);
+
+router.get(
+  "/marcas",
+  ProductoController.obtenerMarcas
+);
+
+router.get(
+  "/modelos",
+  ProductoController.obtenerModelos
+);
+
+router.get(
+  "/:id/compatibilidades",
+  ProductoController.obtenerCompatibilidades
 );
 
 router.get(
@@ -22,7 +38,8 @@ router.get(
   ProductoController.obtenerTodos
 );
 
-// Desde aquí todo requiere sesión y rol
+/* PROTEGIDAS: deben ir después */
+
 router.use(
   verificarToken,
   permitirRoles(
@@ -30,6 +47,11 @@ router.use(
     "TECNICO",
     "VENDEDOR"
   )
+);
+
+router.post(
+  "/importar-modelos",
+  ProductoController.importarModelos
 );
 
 router.get(
@@ -45,6 +67,11 @@ router.post(
 router.put(
   "/:id",
   ProductoController.actualizar
+);
+
+router.put(
+  "/:id/compatibilidades",
+  ProductoController.actualizarCompatibilidades
 );
 
 router.delete(

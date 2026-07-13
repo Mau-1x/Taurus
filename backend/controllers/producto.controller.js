@@ -108,7 +108,41 @@ function validarProducto(datos, esEdicion = false) {
 class ProductoController {
   static async obtenerTodos(req, res) {
     try {
-      const productos = await ProductoModel.obtenerTodos();
+      const idMarca = req.query.idMarca
+        ? Number(req.query.idMarca)
+        : null;
+
+      const idModelo = req.query.idModelo
+        ? Number(req.query.idModelo)
+        : null;
+
+      if (
+        idMarca !== null &&
+        (!Number.isInteger(idMarca) ||
+          idMarca <= 0)
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "La marca no es válida",
+        });
+      }
+
+      if (
+        idModelo !== null &&
+        (!Number.isInteger(idModelo) ||
+          idModelo <= 0)
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "El modelo no es válido",
+        });
+      }
+
+      const productos =
+        await ProductoModel.obtenerTodos({
+          idMarca,
+          idModelo,
+        });
 
       return res.json({
         ok: true,
@@ -116,10 +150,15 @@ class ProductoController {
         data: productos,
       });
     } catch (error) {
+      console.error(
+        "Error obteniendo productos:",
+        error
+      );
+
       return res.status(500).json({
         ok: false,
-        message: "No se pudieron obtener los productos",
-        error: error.message,
+        message:
+          "No se pudieron obtener los productos",
       });
     }
   }
@@ -137,6 +176,290 @@ class ProductoController {
         ok: false,
         message: "No se pudieron obtener las categorías",
         error: error.message,
+      });
+    }
+  }
+
+    static async obtenerMarcas(req, res) {
+    try {
+      const marcas =
+        await ProductoModel.obtenerMarcas();
+
+      return res.json({
+        ok: true,
+        data: marcas,
+      });
+    } catch (error) {
+      console.error(
+        "Error obteniendo marcas:",
+        error
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message:
+          "No se pudieron obtener las marcas",
+      });
+    }
+  }
+
+  static async obtenerModelos(req, res) {
+    try {
+      const idMarca = req.query.idMarca
+        ? Number(req.query.idMarca)
+        : null;
+
+      if (
+        idMarca !== null &&
+        (!Number.isInteger(idMarca) ||
+          idMarca <= 0)
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "La marca no es válida",
+        });
+      }
+
+      const modelos =
+        await ProductoModel.obtenerModelos(
+          idMarca
+        );
+
+      return res.json({
+        ok: true,
+        data: modelos,
+      });
+    } catch (error) {
+      console.error(
+        "Error obteniendo modelos:",
+        error
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message:
+          "No se pudieron obtener los modelos",
+      });
+    }
+  }
+
+  static async obtenerCompatibilidades(req, res) {
+    try {
+      const idProducto = Number(req.params.id);
+
+      if (
+        !Number.isInteger(idProducto) ||
+        idProducto <= 0
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "El producto no es válido",
+        });
+      }
+
+      const modelos =
+        await ProductoModel.obtenerCompatibilidades(
+          idProducto
+        );
+
+      return res.json({
+        ok: true,
+        total: modelos.length,
+        data: modelos,
+      });
+    } catch (error) {
+      console.error(
+        "Error obteniendo compatibilidades:",
+        error
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message:
+          "No se pudieron obtener las compatibilidades",
+      });
+    }
+  }
+
+  static async actualizarCompatibilidades(
+    req,
+    res
+  ) {
+    try {
+      const idProducto = Number(req.params.id);
+      const { idsModelos } = req.body;
+
+      if (
+        !Number.isInteger(idProducto) ||
+        idProducto <= 0
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "El producto no es válido",
+        });
+      }
+
+      if (!Array.isArray(idsModelos)) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "Debes enviar una lista de modelos",
+        });
+      }
+
+      if (idsModelos.length > 300) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "No puedes asignar más de 300 modelos",
+        });
+      }
+
+      const idsNormalizados = [
+        ...new Set(idsModelos.map(Number)),
+      ];
+
+      const contieneIdInvalido =
+        idsNormalizados.some(
+          (idModelo) =>
+            !Number.isInteger(idModelo) ||
+            idModelo <= 0
+        );
+
+      if (contieneIdInvalido) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "Uno de los modelos seleccionados no es válido",
+        });
+      }
+
+      const resultado =
+        await ProductoModel.guardarCompatibilidades(
+          idProducto,
+          idsNormalizados
+        );
+
+      return res.json({
+        ok: true,
+        message:
+          "Compatibilidades actualizadas correctamente",
+        data: resultado,
+      });
+    } catch (error) {
+      console.error(
+        "Error actualizando compatibilidades:",
+        error
+      );
+
+      return res
+        .status(error.statusCode || 500)
+        .json({
+          ok: false,
+          message:
+            error.statusCode
+              ? error.message
+              : "No se pudieron actualizar las compatibilidades",
+        });
+    }
+  }
+
+    static async importarModelos(req, res) {
+    try {
+      const { filas } = req.body;
+
+      if (!Array.isArray(filas)) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "Debes enviar una lista de marcas y modelos",
+        });
+      }
+
+      if (filas.length === 0) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "El archivo no contiene modelos",
+        });
+      }
+
+      if (filas.length > 5000) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "Solo se permiten hasta 5000 modelos por importación",
+        });
+      }
+
+      const filasNormalizadas = [];
+
+      for (const fila of filas) {
+        const marca = String(
+          fila.marca || fila.MARCA || ""
+        )
+          .trim()
+          .replace(/\s+/g, " ");
+
+        const modelo = String(
+          fila.modelo || fila.MODELO || ""
+        )
+          .trim()
+          .replace(/\s+/g, " ");
+
+        if (!marca || !modelo) {
+          continue;
+        }
+
+        if (marca.length > 100) {
+          return res.status(400).json({
+            ok: false,
+            message: `La marca "${marca}" supera los 100 caracteres`,
+          });
+        }
+
+        if (modelo.length > 150) {
+          return res.status(400).json({
+            ok: false,
+            message: `El modelo "${modelo}" supera los 150 caracteres`,
+          });
+        }
+
+        filasNormalizadas.push({
+          marca,
+          modelo,
+        });
+      }
+
+      if (filasNormalizadas.length === 0) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "No se encontraron filas válidas",
+        });
+      }
+
+      const resultado =
+        await ProductoModel.importarModelos(
+          filasNormalizadas
+        );
+
+      return res.json({
+        ok: true,
+        message:
+          "Catálogo de dispositivos importado correctamente",
+        data: resultado,
+      });
+    } catch (error) {
+      console.error(
+        "Error importando modelos:",
+        error
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message:
+          "No se pudieron importar las marcas y modelos",
       });
     }
   }
