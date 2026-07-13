@@ -1,4 +1,10 @@
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import { Link } from "react-router-dom";
+
 import {
   ArrowRight,
   Wrench,
@@ -12,7 +18,15 @@ import {
   CalendarDays,
   ScanSearch,
   CheckCircle2,
+  HelpCircle,
+  ChevronDown,
+  ShoppingBag,
+  ImageOff,
 } from "lucide-react";
+
+import {
+  obtenerProductos,
+} from "../../services/productoService";
 
 const servicios = [
   {
@@ -72,9 +86,96 @@ const pasos = [
   },
 ];
 
+const preguntasFrecuentes = [
+  {
+    pregunta: "¿Cuánto demora una reparación?",
+    respuesta:
+      "El tiempo depende de la falla, el modelo del equipo y la disponibilidad del repuesto. Después del diagnóstico te indicaremos un tiempo estimado.",
+  },
+  {
+    pregunta:
+      "¿Realizan reparaciones sin autorización?",
+    respuesta:
+      "No. Primero se realiza el diagnóstico y se informa el costo estimado. La reparación comienza después de recibir la aprobación del cliente.",
+  },
+  {
+    pregunta:
+      "¿Las reparaciones tienen garantía?",
+    respuesta:
+      "La garantía depende del servicio y del repuesto utilizado. Los días de garantía quedan registrados en el sistema.",
+  },
+  {
+    pregunta:
+      "¿Cómo consulto el estado de mi equipo?",
+    respuesta:
+      "Al registrar la reparación recibirás un código. Puedes ingresarlo en la página de seguimiento para revisar el avance.",
+  },
+  {
+    pregunta:
+      "¿Necesito reservar antes de asistir?",
+    respuesta:
+      "La reserva permite separar una fecha y hora de atención. También puedes consultar previamente la disponibilidad.",
+  },
+  {
+    pregunta:
+      "¿Cuál es el horario de atención?",
+    respuesta:
+      "Atendemos de 10:00 a. m. a 9:00 p. m.",
+  },
+];
+
 function Home() {
+  const [
+    productosDestacados,
+    setProductosDestacados,
+  ] = useState([]);
+
+  useEffect(() => {
+    async function cargarProductosDestacados() {
+      try {
+        const respuesta = await obtenerProductos();
+
+        console.log(
+          "Productos recibidos en Inicio:",
+          respuesta
+        );
+
+        const productos = Array.isArray(respuesta)
+          ? respuesta
+          : [];
+
+        const disponibles = productos
+          .filter(
+            (producto) =>
+              Number(producto.STOCK) > 0
+          )
+          .sort(
+            (productoA, productoB) =>
+              Number(productoB.IDPRODUCTO) -
+              Number(productoA.IDPRODUCTO)
+          )
+          .slice(0, 4);
+
+        console.log(
+          "Productos destacados:",
+          disponibles
+        );
+
+        setProductosDestacados(disponibles);
+      } catch (error) {
+        console.error(
+          "Error cargando productos en Inicio:",
+          error
+        );
+      }
+    }
+
+    cargarProductosDestacados();
+  }, []);
+
   return (
     <main className="bg-gray-50">
+      {/* HERO */}
       <section className="relative overflow-hidden bg-black text-white">
         <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-950 to-red-950" />
 
@@ -88,12 +189,14 @@ function Home() {
             </span>
 
             <h1 className="mt-7 text-4xl font-bold leading-tight md:text-6xl">
-              Reparación y cuidado para tu dispositivo
+              Reparación y cuidado para tu
+              dispositivo
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-8 text-gray-300">
-              Diagnosticamos y reparamos celulares y tablets. Además,
-              ofrecemos accesorios, reservas en línea y seguimiento del
+              Diagnosticamos y reparamos celulares y
+              tablets. Además, ofrecemos accesorios,
+              reservas en línea y seguimiento del
               servicio técnico.
             </p>
 
@@ -172,15 +275,32 @@ function Home() {
         </div>
       </section>
 
+      {/* DATOS DESTACADOS */}
       <section className="relative z-10 -mt-8">
         <div className="mx-auto grid max-w-6xl gap-4 px-6 sm:grid-cols-2 lg:grid-cols-4">
-          <Dato titulo="Atención" valor="Personalizada" />
-          <Dato titulo="Servicios" valor="Especializados" />
-          <Dato titulo="Seguimiento" valor="En línea" />
-          <Dato titulo="Inventario" valor="Actualizado" />
+          <Dato
+            titulo="Atención"
+            valor="Personalizada"
+          />
+
+          <Dato
+            titulo="Servicios"
+            valor="Especializados"
+          />
+
+          <Dato
+            titulo="Seguimiento"
+            valor="En línea"
+          />
+
+          <Dato
+            titulo="Inventario"
+            valor="Actualizado"
+          />
         </div>
       </section>
 
+      {/* SERVICIOS */}
       <section className="py-24">
         <div className="mx-auto max-w-7xl px-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
@@ -190,7 +310,8 @@ function Home() {
               </p>
 
               <h2 className="mt-3 max-w-2xl text-3xl font-bold text-gray-900 md:text-4xl">
-                Soluciones para los problemas más comunes
+                Soluciones para los problemas más
+                comunes
               </h2>
             </div>
 
@@ -230,6 +351,50 @@ function Home() {
         </div>
       </section>
 
+      {/* PRODUCTOS DESTACADOS */}
+      {productosDestacados.length > 0 && (
+        <section className="bg-white py-24">
+          <div className="mx-auto max-w-7xl px-6">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-widest text-red-700">
+                  Productos destacados
+                </p>
+
+                <h2 className="mt-3 text-3xl font-bold text-gray-900 md:text-4xl">
+                  Accesorios y repuestos disponibles
+                </h2>
+
+                <p className="mt-4 max-w-2xl text-gray-600">
+                  Conoce algunos de los productos que
+                  tenemos disponibles actualmente.
+                </p>
+              </div>
+
+              <Link
+                to="/productos"
+                className="inline-flex items-center gap-2 font-semibold text-red-700"
+              >
+                Ver catálogo completo
+                <ArrowRight size={19} />
+              </Link>
+            </div>
+
+            <div className="mt-12 grid gap-7 sm:grid-cols-2 lg:grid-cols-4">
+              {productosDestacados.map(
+                (producto) => (
+                  <ProductoDestacado
+                    key={producto.IDPRODUCTO}
+                    producto={producto}
+                  />
+                )
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* PROCESO */}
       <section className="bg-white py-24">
         <div className="mx-auto max-w-7xl px-6">
           <div className="text-center">
@@ -242,8 +407,9 @@ function Home() {
             </h2>
 
             <p className="mx-auto mt-4 max-w-2xl text-gray-600">
-              Desde la reserva hasta la entrega, podrás conocer el estado de tu
-              equipo durante todo el proceso.
+              Desde la reserva hasta la entrega, podrás
+              conocer el estado de tu equipo durante
+              todo el proceso.
             </p>
           </div>
 
@@ -278,18 +444,23 @@ function Home() {
         </div>
       </section>
 
+      {/* VENTAJAS */}
       <section className="py-24">
         <div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-2">
           <div className="rounded-3xl bg-black p-9 text-white md:p-12">
-            <ShieldCheck size={44} className="text-red-500" />
+            <ShieldCheck
+              size={44}
+              className="text-red-500"
+            />
 
             <h2 className="mt-6 text-3xl font-bold">
               Controlamos cada etapa de la reparación
             </h2>
 
             <p className="mt-5 leading-8 text-gray-300">
-              Taurus registra la falla reportada, diagnóstico, solución,
-              costos, estados y garantía del servicio realizado.
+              Taurus registra la falla reportada,
+              diagnóstico, solución, costos, estados y
+              garantía del servicio realizado.
             </p>
 
             <Link
@@ -329,6 +500,43 @@ function Home() {
         </div>
       </section>
 
+      {/* PREGUNTAS FRECUENTES */}
+      <section className="bg-white py-24">
+        <div className="mx-auto max-w-4xl px-6">
+          <div className="text-center">
+            <div className="mx-auto inline-flex rounded-2xl bg-red-100 p-4 text-red-700">
+              <HelpCircle size={30} />
+            </div>
+
+            <p className="mt-5 text-sm font-bold uppercase tracking-widest text-red-700">
+              Preguntas frecuentes
+            </p>
+
+            <h2 className="mt-3 text-3xl font-bold text-gray-900 md:text-4xl">
+              Resolvemos tus principales dudas
+            </h2>
+
+            <p className="mx-auto mt-4 max-w-2xl text-gray-600">
+              Conoce cómo funciona la atención y el
+              seguimiento de reparaciones en Taurus.
+            </p>
+          </div>
+
+          <div className="mt-12 space-y-4">
+            {preguntasFrecuentes.map(
+              (pregunta) => (
+                <PreguntaFrecuente
+                  key={pregunta.pregunta}
+                  pregunta={pregunta.pregunta}
+                  respuesta={pregunta.respuesta}
+                />
+              )
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* LLAMADA FINAL */}
       <section className="bg-red-800 py-16 text-white">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-7 px-6 text-center lg:flex-row lg:text-left">
           <div>
@@ -337,7 +545,8 @@ function Home() {
             </h2>
 
             <p className="mt-3 text-red-100">
-              Reserva una cita y cuéntanos qué problema presenta tu equipo.
+              Reserva una cita y cuéntanos qué problema
+              presenta tu equipo.
             </p>
           </div>
 
@@ -354,16 +563,154 @@ function Home() {
   );
 }
 
+function ProductoDestacado({ producto }) {
+  const compatibilidad = [
+    producto.MARCA,
+    producto.MODELO,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <article className="group flex flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+      <div className="relative flex h-52 items-center justify-center overflow-hidden bg-gray-100">
+        {producto.IMAGEN ? (
+          <img
+            src={producto.IMAGEN}
+            alt={producto.NOMBRE}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            onError={(evento) => {
+              evento.currentTarget.style.display =
+                "none";
+
+              const reemplazo =
+                evento.currentTarget
+                  .nextElementSibling;
+
+              if (reemplazo) {
+                reemplazo.style.display = "flex";
+              }
+            }}
+          />
+        ) : null}
+
+        <div
+          className={`h-full w-full items-center justify-center ${
+            producto.IMAGEN
+              ? "hidden"
+              : "flex"
+          }`}
+        >
+          <ImageOff
+            size={45}
+            className="text-gray-300"
+          />
+        </div>
+
+        <span className="absolute left-4 top-4 rounded-full bg-black/80 px-3 py-1 text-xs font-semibold text-white">
+          {producto.CATEGORIA}
+        </span>
+      </div>
+
+      <div className="flex flex-1 flex-col p-6">
+        <p className="text-xs font-bold uppercase tracking-wider text-red-700">
+          {producto.CODIGO}
+        </p>
+
+        <h3 className="mt-2 text-lg font-bold text-gray-900">
+          {producto.NOMBRE}
+        </h3>
+
+        <p className="mt-3 text-sm text-gray-500">
+          {compatibilidad || "Universal"}
+        </p>
+
+        <div className="mt-auto pt-6">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-2xl font-bold text-red-700">
+              S/{" "}
+              {Number(
+                producto.PRECIO_VENTA
+              ).toFixed(2)}
+            </p>
+
+            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+              Stock: {producto.STOCK}
+            </span>
+          </div>
+
+          <Link
+            to="/productos"
+            className="mt-5 flex items-center justify-center gap-2 rounded-xl bg-black px-4 py-3 font-semibold text-white transition hover:bg-red-700"
+          >
+            <ShoppingBag size={18} />
+            Ver producto
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function PreguntaFrecuente({
+  pregunta,
+  respuesta,
+}) {
+  const [abierta, setAbierta] = useState(false);
+
+  return (
+    <article className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50">
+      <button
+        type="button"
+        aria-expanded={abierta}
+        onClick={() =>
+          setAbierta(
+            (estadoActual) => !estadoActual
+          )
+        }
+        className="flex w-full items-center justify-between gap-5 px-6 py-5 text-left"
+      >
+        <span className="font-bold text-gray-900">
+          {pregunta}
+        </span>
+
+        <ChevronDown
+          size={21}
+          className={`shrink-0 text-red-700 transition-transform ${
+            abierta ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {abierta && (
+        <div className="border-t border-gray-200 px-6 py-5">
+          <p className="leading-7 text-gray-600">
+            {respuesta}
+          </p>
+        </div>
+      )}
+    </article>
+  );
+}
+
 function Beneficio({ texto }) {
   return (
     <div className="flex items-center gap-2">
-      <CheckCircle2 size={18} className="text-red-500" />
+      <CheckCircle2
+        size={18}
+        className="text-red-500"
+      />
+
       {texto}
     </div>
   );
 }
 
-function PasoEstado({ titulo, descripcion, completado = false }) {
+function PasoEstado({
+  titulo,
+  descripcion,
+  completado = false,
+}) {
   return (
     <div className="flex gap-4">
       <div
@@ -377,8 +724,13 @@ function PasoEstado({ titulo, descripcion, completado = false }) {
       </div>
 
       <div>
-        <p className="font-bold">{titulo}</p>
-        <p className="mt-1 text-sm text-gray-500">{descripcion}</p>
+        <p className="font-bold">
+          {titulo}
+        </p>
+
+        <p className="mt-1 text-sm text-gray-500">
+          {descripcion}
+        </p>
       </div>
     </div>
   );
@@ -387,22 +739,35 @@ function PasoEstado({ titulo, descripcion, completado = false }) {
 function Dato({ titulo, valor }) {
   return (
     <article className="rounded-2xl border border-gray-200 bg-white p-5 text-center shadow-lg">
-      <p className="text-sm text-gray-500">{titulo}</p>
-      <p className="mt-1 text-lg font-bold text-gray-900">{valor}</p>
+      <p className="text-sm text-gray-500">
+        {titulo}
+      </p>
+
+      <p className="mt-1 text-lg font-bold text-gray-900">
+        {valor}
+      </p>
     </article>
   );
 }
 
-function Ventaja({ icono: Icono, titulo, descripcion }) {
+function Ventaja({
+  icono: Icono,
+  titulo,
+  descripcion,
+}) {
   return (
     <article className="rounded-3xl border border-gray-200 bg-white p-7 shadow-sm">
       <div className="inline-flex rounded-2xl bg-red-100 p-4 text-red-700">
         <Icono size={27} />
       </div>
 
-      <h3 className="mt-5 text-xl font-bold text-gray-900">{titulo}</h3>
+      <h3 className="mt-5 text-xl font-bold text-gray-900">
+        {titulo}
+      </h3>
 
-      <p className="mt-3 leading-7 text-gray-600">{descripcion}</p>
+      <p className="mt-3 leading-7 text-gray-600">
+        {descripcion}
+      </p>
     </article>
   );
 }

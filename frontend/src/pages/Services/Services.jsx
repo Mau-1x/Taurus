@@ -10,6 +10,8 @@ import {
   ShieldCheck,
   Clock3,
   Wrench,
+  CircleCheck,
+  CalendarClock,
 } from "lucide-react";
 
 const servicios = [
@@ -19,6 +21,13 @@ const servicios = [
       "Reemplazo de pantallas rotas, con manchas, líneas o problemas táctiles.",
     icono: Smartphone,
     reserva: "Cambio de pantalla",
+    tiempo: "1 a 3 horas",
+    garantia: "Hasta 30 días",
+    incluye: [
+      "Diagnóstico de pantalla",
+      "Instalación del repuesto",
+      "Prueba de imagen y táctil",
+    ],
   },
   {
     titulo: "Cambio de batería",
@@ -26,6 +35,13 @@ const servicios = [
       "Solución para baterías que duran poco, se apagan o presentan fallas de carga.",
     icono: BatteryCharging,
     reserva: "Cambio de batería",
+    tiempo: "1 a 2 horas",
+    garantia: "Hasta 30 días",
+    incluye: [
+      "Revisión del consumo",
+      "Cambio de batería",
+      "Prueba de carga",
+    ],
   },
   {
     titulo: "Puerto de carga",
@@ -33,6 +49,13 @@ const servicios = [
       "Reparación o reemplazo del conector cuando el equipo no carga correctamente.",
     icono: PlugZap,
     reserva: "Reparación de puerto de carga",
+    tiempo: "2 a 5 horas",
+    garantia: "Hasta 30 días",
+    incluye: [
+      "Limpieza del conector",
+      "Diagnóstico de carga",
+      "Reparación o reemplazo",
+    ],
   },
   {
     titulo: "Problemas de software",
@@ -40,6 +63,13 @@ const servicios = [
       "Revisión de lentitud, errores del sistema, bloqueos y aplicaciones defectuosas.",
     icono: Cpu,
     reserva: "Problema de software",
+    tiempo: "1 a 4 horas",
+    garantia: "Según el servicio",
+    incluye: [
+      "Diagnóstico del sistema",
+      "Corrección de errores",
+      "Pruebas de funcionamiento",
+    ],
   },
   {
     titulo: "Diagnóstico técnico",
@@ -47,6 +77,13 @@ const servicios = [
       "Evaluación completa para detectar el origen real de la falla del dispositivo.",
     icono: SearchCheck,
     reserva: "Diagnóstico general",
+    tiempo: "30 a 60 minutos",
+    garantia: "No aplica",
+    incluye: [
+      "Revisión del equipo",
+      "Identificación de la falla",
+      "Presupuesto estimado",
+    ],
   },
   {
     titulo: "Liberación de equipos",
@@ -54,6 +91,13 @@ const servicios = [
       "Revisión y soporte para equipos compatibles con procesos de liberación.",
     icono: Unlock,
     reserva: "Liberación de equipo",
+    tiempo: "Según modelo",
+    garantia: "Según compatibilidad",
+    incluye: [
+      "Revisión del modelo",
+      "Validación de compatibilidad",
+      "Prueba de funcionamiento",
+    ],
   },
 ];
 
@@ -120,6 +164,19 @@ function Services() {
             {servicios.map((servicio) => {
               const Icono = servicio.icono;
 
+              <div className="mt-10 rounded-2xl border border-yellow-200 bg-yellow-50 p-5">
+                <p className="font-semibold text-yellow-900">
+                  Los tiempos y garantías son referenciales
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-yellow-800">
+                  El tiempo final, el costo y la garantía dependen del modelo,
+                  la disponibilidad del repuesto y el diagnóstico técnico.
+                  No realizamos ninguna reparación sin la aprobación previa
+                  del cliente.
+                </p>
+              </div>
+
               return (
                 <article
                   key={servicio.titulo}
@@ -136,6 +193,52 @@ function Services() {
                   <p className="mt-3 leading-7 text-gray-600">
                     {servicio.descripcion}
                   </p>
+
+                  <div className="mt-5 grid grid-cols-2 gap-3">
+                    <div className="rounded-xl bg-gray-50 p-3">
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <CalendarClock size={17} />
+                        Tiempo estimado
+                      </div>
+
+                      <p className="mt-1 font-semibold text-gray-900">
+                        {servicio.tiempo}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-gray-50 p-3">
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <ShieldCheck size={17} />
+                        Garantía
+                      </div>
+
+                      <p className="mt-1 font-semibold text-gray-900">
+                        {servicio.garantia}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    <p className="text-sm font-bold text-gray-800">
+                      El servicio incluye:
+                    </p>
+
+                    <ul className="mt-3 space-y-2">
+                      {servicio.incluye.map((elemento) => (
+                        <li
+                          key={elemento}
+                          className="flex items-start gap-2 text-sm text-gray-600"
+                        >
+                          <CircleCheck
+                            size={17}
+                            className="mt-0.5 shrink-0 text-green-600"
+                          />
+
+                          {elemento}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
                   <Link
                     to={`/reservas?servicio=${encodeURIComponent(
