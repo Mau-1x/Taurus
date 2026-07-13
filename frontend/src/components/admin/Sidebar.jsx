@@ -10,6 +10,7 @@ import {
   Settings,
   LogOut,
   X,
+  ClipboardList,
 } from "lucide-react";
 
 import {
@@ -82,6 +83,12 @@ const opciones = [
     nombre: "Reportes",
     ruta: "/admin/reportes",
     icono: BarChart3,
+    roles: ["ADMINISTRADOR"],
+  },
+  {
+    nombre: "Auditoría",
+    ruta: "/admin/auditoria",
+    icono: ClipboardList,
     roles: ["ADMINISTRADOR"],
   },
   {

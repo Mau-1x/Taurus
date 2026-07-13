@@ -28,6 +28,7 @@ import Sales from "../pages/admin/Sales/Sales";
 import ReservationsAdmin from "../pages/admin/ReservationsAdmin/ReservationsAdmin";
 import Reports from "../pages/admin/Reports/Reports";
 import Settings from "../pages/admin/Settings/Settings";
+import Audit from "../pages/admin/Audit/Audit";
 
 function AppRouter() {
   return (
@@ -137,6 +138,10 @@ function AppRouter() {
             <Route
               path="reportes"
               element={<Reports />}
+            />
+            <Route
+              path="auditoria"
+              element={<Audit />}
             />
             <Route
               path="configuracion"

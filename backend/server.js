@@ -14,6 +14,7 @@ const reservaRoutes = require("./routes/reserva.routes");
 const authRoutes = require("./routes/auth.routes");
 const reporteRoutes = require("./routes/reporte.routes");
 const usuarioRoutes = require("./routes/usuario.routes");
+const auditoriaRoutes = require("./routes/auditoria.routes");
 
 const app = express();
 
@@ -80,6 +81,7 @@ app.use("/api/ventas", ventaRoutes);
 app.use("/api/reservas", reservaRoutes);
 app.use("/api/reportes", reporteRoutes);
 app.use("/api/usuarios", usuarioRoutes);
+app.use("/api/auditoria", auditoriaRoutes);
 
 app.use((req, res) => {
   return res.status(404).json({
