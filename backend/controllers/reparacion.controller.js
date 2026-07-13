@@ -1,4 +1,7 @@
 const ReparacionModel = require("../models/reparacion.model");
+const {
+  registrarAuditoria,
+} = require("../utils/auditoria");
 
 function validarDatosReparacion(datos, esEdicion = false) {
   const {
@@ -301,6 +304,24 @@ class ReparacionController {
         });
       }
 
+      await registrarAuditoria({
+        req,
+        modulo: "REPARACIONES",
+        accion: "CAMBIAR_ESTADO",
+        entidad: "REPARACION",
+        identidad: idReparacion,
+        descripcion: `Estado de reparación cambiado a ${estado.NOMBRE}`,
+        datosAnteriores: {
+          idEstado: reparacionAnterior?.IDESTADO,
+          estado: reparacionAnterior?.ESTADO_REPARACION,
+        },
+        datosNuevos: {
+          idEstado,
+          estado: estado.NOMBRE,
+          comentario: comentario || null,
+        },
+      });
+
       return res.json({
         ok: true,
         message: "Reparación actualizada correctamente",
@@ -376,6 +397,9 @@ class ReparacionController {
         });
       }
 
+      const reparacionAnterior =
+        await ReparacionModel.obtenerPorId(idReparacion);
+
       const actualizado =
         await ReparacionModel.cambiarEstado(
           idReparacion,
@@ -391,6 +415,7 @@ class ReparacionController {
           message: "Reparación no encontrada",
         });
       }
+
 
       return res.json({
         ok: true,
@@ -488,6 +513,22 @@ static async agregarRepuesto(req, res) {
         idProducto,
         cantidad
       );
+    
+    await registrarAuditoria({
+      req,
+      modulo: "REPARACIONES",
+      accion: "AGREGAR_REPUESTO",
+      entidad: "REPARACION",
+      identidad: idReparacion,
+      descripcion: `Se agregó un repuesto a la reparación`,
+      datosNuevos: {
+        idProducto,
+        producto: resultado.producto,
+        cantidad,
+        stockAnterior: resultado.stockAnterior,
+        stockNuevo: resultado.stockNuevo,
+      },
+    });
 
     return res.status(201).json({
       ok: true,
@@ -532,10 +573,45 @@ static async agregarRepuesto(req, res) {
         });
       }
 
+    const repuestosAnteriores =
+      await ReparacionModel.obtenerRepuestos(
+        idReparacion
+      );
+
+    const repuestoAnterior =
+      repuestosAnteriores.find(
+        (repuesto) =>
+          Number(repuesto.IDPRODUCTO) === idProducto
+      );
+
       await ReparacionModel.quitarRepuesto(
         idReparacion,
         idProducto
       );
+
+      await registrarAuditoria({
+        req,
+        modulo: "REPARACIONES",
+        accion: "QUITAR_REPUESTO",
+        entidad: "REPARACION",
+        identidad: idReparacion,
+        descripcion:
+          "Se retiró un repuesto de la reparación",
+        datosAnteriores: repuestoAnterior
+          ? {
+              idProducto:
+                repuestoAnterior.IDPRODUCTO,
+              producto:
+                repuestoAnterior.PRODUCTO,
+              cantidad:
+                repuestoAnterior.CANTIDAD,
+              precioUnitario:
+                repuestoAnterior.PRECIO_UNITARIO,
+            }
+          : {
+              idProducto,
+            },
+      });
 
       return res.json({
         ok: true,
@@ -712,6 +788,25 @@ static async agregarRepuesto(req, res) {
             "No se pudo registrar el pago",
         });
     }
+    await registrarAuditoria({
+      req,
+      modulo: "REPARACIONES",
+      accion: "REGISTRAR_PAGO",
+      entidad: "REPARACION",
+      identidad: idReparacion,
+      descripcion:
+        "Se registró un pago para la reparación",
+      datosNuevos: {
+        idPago: pago.IDPAGO,
+        monto,
+        metodoPago,
+        observaciones,
+        totalPagado: resumen.TOTAL_PAGADO,
+        saldoPendiente:
+          resumen.SALDO_PENDIENTE,
+        estadoPago: resumen.ESTADO_PAGO,
+      },
+    });
   }
 
   static async anularPago(req, res) {
@@ -731,6 +826,15 @@ static async agregarRepuesto(req, res) {
             "La reparación o el pago no son válidos",
         });
       }
+
+      const pagosAnteriores =
+        await ReparacionModel.obtenerPagos(
+          idReparacion
+        );
+
+      const pagoAnterior = pagosAnteriores.find(
+        (pago) => Number(pago.IDPAGO) === idPago
+      );
 
       const anulado =
         await ReparacionModel.anularPago(
@@ -767,6 +871,33 @@ static async agregarRepuesto(req, res) {
         message: "No se pudo anular el pago",
       });
     }
+    await registrarAuditoria({
+      req,
+      modulo: "REPARACIONES",
+      accion: "ANULAR_PAGO",
+      entidad: "REPARACION",
+      identidad: idReparacion,
+      descripcion:
+        "Se anuló un pago de la reparación",
+      datosAnteriores: pagoAnterior
+        ? {
+            idPago: pagoAnterior.IDPAGO,
+            monto: pagoAnterior.MONTO,
+            metodoPago:
+              pagoAnterior.METODO_PAGO,
+            observaciones:
+              pagoAnterior.OBSERVACIONES,
+          }
+        : {
+            idPago,
+          },
+      datosNuevos: {
+        totalPagado: resumen.TOTAL_PAGADO,
+        saldoPendiente:
+          resumen.SALDO_PENDIENTE,
+        estadoPago: resumen.ESTADO_PAGO,
+      },
+    });
   }
 
   static async obtenerHistorial(req, res) {
