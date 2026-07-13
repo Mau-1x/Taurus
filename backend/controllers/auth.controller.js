@@ -233,6 +233,174 @@ class AuthController {
     }
   }
 
+    static async cambiarPassword(req, res) {
+    try {
+      const {
+        passwordActual,
+        passwordNueva,
+        confirmarPassword,
+      } = req.body;
+
+      if (
+        !passwordActual ||
+        !passwordNueva ||
+        !confirmarPassword
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "Completa todos los campos de contraseña",
+        });
+      }
+
+      if (
+        typeof passwordActual !== "string" ||
+        typeof passwordNueva !== "string" ||
+        typeof confirmarPassword !== "string"
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "Los datos enviados no son válidos",
+        });
+      }
+
+      if (
+        passwordActual.length > 72 ||
+        passwordNueva.length > 72
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message: "La contraseña no es válida",
+        });
+      }
+
+      if (passwordNueva.length < 8) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La nueva contraseña debe tener al menos 8 caracteres",
+        });
+      }
+
+      if (
+        !/[A-Z]/.test(passwordNueva) ||
+        !/[a-z]/.test(passwordNueva) ||
+        !/\d/.test(passwordNueva)
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La nueva contraseña debe incluir mayúscula, minúscula y número",
+        });
+      }
+
+      if (passwordNueva !== confirmarPassword) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La confirmación no coincide con la nueva contraseña",
+        });
+      }
+
+      if (passwordActual === passwordNueva) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La nueva contraseña debe ser diferente a la actual",
+        });
+      }
+
+      const usuario =
+        await AuthModel.obtenerConPasswordPorId(
+          req.usuario.idUsuario
+        );
+
+      if (!usuario || !usuario.ESTADO) {
+        return res.status(404).json({
+          ok: false,
+          message: "Usuario no encontrado",
+        });
+      }
+
+      const passwordCorrecta = await bcrypt.compare(
+        passwordActual,
+        usuario.PASSWORD_HASH
+      );
+
+      if (!passwordCorrecta) {
+        return res.status(401).json({
+          ok: false,
+          message:
+            "La contraseña actual es incorrecta",
+        });
+      }
+
+      const coincideConAnterior =
+        await bcrypt.compare(
+          passwordNueva,
+          usuario.PASSWORD_HASH
+        );
+
+      if (coincideConAnterior) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La nueva contraseña debe ser diferente a la actual",
+        });
+      }
+
+      const nuevoHash = await bcrypt.hash(
+        passwordNueva,
+        12
+      );
+
+      const actualizado =
+        await AuthModel.actualizarPassword(
+          usuario.IDUSUARIO,
+          nuevoHash
+        );
+
+      if (!actualizado) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "No se pudo actualizar la contraseña",
+        });
+      }
+
+      await registrarAuditoria({
+        req,
+        idUsuario: usuario.IDUSUARIO,
+        modulo: "AUTENTICACION",
+        accion: "EDITAR",
+        entidad: "USUARIO",
+        identidad: usuario.IDUSUARIO,
+        descripcion:
+          "El usuario cambió su contraseña",
+        datosNuevos: {
+          resultado: "CONTRASENA_ACTUALIZADA",
+        },
+      });
+
+      return res.json({
+        ok: true,
+        message:
+          "Contraseña actualizada correctamente",
+      });
+    } catch (error) {
+      console.error(
+        "Error cambiando contraseña:",
+        error
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message:
+          "No se pudo cambiar la contraseña",
+      });
+    }
+  }
+
   static async obtenerPerfil(req, res) {
     try {
       const usuario = await AuthModel.obtenerPorId(

@@ -94,6 +94,50 @@ class AuthModel {
 
     return result.recordset[0] || null;
   }
+
+  static async obtenerConPasswordPorId(idUsuario) {
+  const pool = await getConnection();
+
+  const result = await pool
+    .request()
+    .input("idUsuario", sql.Int, idUsuario)
+    .query(`
+      SELECT
+        IDUSUARIO,
+        NOMBRE,
+        CORREO,
+        PASSWORD_HASH,
+        ESTADO
+      FROM USUARIO
+      WHERE IDUSUARIO = @idUsuario
+    `);
+
+  return result.recordset[0] || null;
+}
+
+  static async actualizarPassword(
+    idUsuario,
+    passwordHash
+  ) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input("idUsuario", sql.Int, idUsuario)
+      .input(
+        "passwordHash",
+        sql.VarChar(255),
+        passwordHash
+      )
+      .query(`
+        UPDATE USUARIO
+        SET PASSWORD_HASH = @passwordHash
+        WHERE IDUSUARIO = @idUsuario
+          AND ESTADO = 1
+      `);
+
+    return result.rowsAffected[0] > 0;
+  }
 }
 
 module.exports = AuthModel;

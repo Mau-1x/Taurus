@@ -87,3 +87,21 @@ export function estaAutenticado() {
     return false;
   }
 }
+
+export async function cambiarPassword(datos) {
+  const token = obtenerToken();
+
+  const respuesta = await fetch(
+    `${API_URL}/cambiar-password`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(datos),
+    }
+  );
+
+  return procesarRespuesta(respuesta);
+}

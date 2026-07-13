@@ -25,6 +25,12 @@ router.get(
   AuthController.obtenerPerfil
 );
 
+router.patch(
+  "/cambiar-password",
+  verificarToken,
+  AuthController.cambiarPassword
+);
+
 router.get(
   "/solo-admin",
   verificarToken,

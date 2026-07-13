@@ -10,6 +10,9 @@ import {
   X,
   LoaderCircle,
   AlertCircle,
+  KeyRound,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import {
@@ -20,7 +23,10 @@ import {
   cambiarEstadoUsuario,
 } from "../../../services/usuarioService";
 
-import { obtenerUsuario } from "../../../services/authService";
+import {
+  obtenerUsuario,
+  cambiarPassword,
+} from "../../../services/authService";
 
 const formularioInicial = {
   idRol: "",
@@ -46,6 +52,25 @@ function Settings() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
+
+  const [passwordFormulario, setPasswordFormulario] =
+    useState({
+      passwordActual: "",
+      passwordNueva: "",
+      confirmarPassword: "",
+    });
+
+  const [mostrarPasswords, setMostrarPasswords] =
+    useState(false);
+
+  const [cambiandoPassword, setCambiandoPassword] =
+    useState(false);
+
+  const [errorPassword, setErrorPassword] =
+    useState("");
+
+  const [mensajePassword, setMensajePassword] =
+    useState("");
 
   useEffect(() => {
     cargarDatos();
@@ -270,6 +295,83 @@ function Settings() {
       setError(errorEstado.message);
     }
   }
+  function manejarCambioPasswordCampo(evento) {
+  const { name, value } = evento.target;
+
+  setPasswordFormulario((anterior) => ({
+    ...anterior,
+    [name]: value.slice(0, 72),
+  }));
+}
+
+  async function manejarCambiarPassword(evento) {
+    evento.preventDefault();
+
+    try {
+      setCambiandoPassword(true);
+      setErrorPassword("");
+      setMensajePassword("");
+
+      const {
+        passwordActual,
+        passwordNueva,
+        confirmarPassword,
+      } = passwordFormulario;
+
+      if (
+        !passwordActual ||
+        !passwordNueva ||
+        !confirmarPassword
+      ) {
+        throw new Error(
+          "Completa todos los campos"
+        );
+      }
+
+      if (passwordNueva.length < 8) {
+        throw new Error(
+          "La nueva contraseña debe tener al menos 8 caracteres"
+        );
+      }
+
+      if (
+        !/[A-Z]/.test(passwordNueva) ||
+        !/[a-z]/.test(passwordNueva) ||
+        !/\d/.test(passwordNueva)
+      ) {
+        throw new Error(
+          "La nueva contraseña debe incluir mayúscula, minúscula y número"
+        );
+      }
+
+      if (passwordNueva !== confirmarPassword) {
+        throw new Error(
+          "Las contraseñas nuevas no coinciden"
+        );
+      }
+
+      await cambiarPassword({
+        passwordActual,
+        passwordNueva,
+        confirmarPassword,
+      });
+
+      setMensajePassword(
+        "Contraseña actualizada correctamente"
+      );
+
+      setPasswordFormulario({
+        passwordActual: "",
+        passwordNueva: "",
+        confirmarPassword: "",
+      });
+    } catch (errorCambio) {
+      setErrorPassword(errorCambio.message);
+    } finally {
+      setCambiandoPassword(false);
+    }
+  }
+  
 
   return (
     <section>
@@ -325,6 +427,107 @@ function Settings() {
           icono={ShieldCheck}
           clase="bg-purple-100 text-purple-700"
         />
+      </div>
+
+      <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-red-100 p-3 text-red-700">
+            <KeyRound size={24} />
+          </div>
+
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">
+              Cambiar mi contraseña
+            </h2>
+
+            <p className="text-sm text-gray-500">
+              Actualiza la contraseña de tu cuenta actual.
+            </p>
+          </div>
+        </div>
+
+        <form
+          onSubmit={manejarCambiarPassword}
+          className="mt-6 grid gap-5 lg:grid-cols-3"
+        >
+          <CampoPassword
+            titulo="Contraseña actual"
+            nombre="passwordActual"
+            valor={passwordFormulario.passwordActual}
+            cambiar={manejarCambioPasswordCampo}
+            mostrar={mostrarPasswords}
+            autoComplete="current-password"
+          />
+
+          <CampoPassword
+            titulo="Nueva contraseña"
+            nombre="passwordNueva"
+            valor={passwordFormulario.passwordNueva}
+            cambiar={manejarCambioPasswordCampo}
+            mostrar={mostrarPasswords}
+            autoComplete="new-password"
+          />
+
+          <CampoPassword
+            titulo="Confirmar contraseña"
+            nombre="confirmarPassword"
+            valor={passwordFormulario.confirmarPassword}
+            cambiar={manejarCambioPasswordCampo}
+            mostrar={mostrarPasswords}
+            autoComplete="new-password"
+          />
+
+          <div className="flex flex-col gap-4 lg:col-span-3 lg:flex-row lg:items-center lg:justify-between">
+            <button
+              type="button"
+              onClick={() =>
+                setMostrarPasswords(
+                  (anterior) => !anterior
+                )
+              }
+              className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900"
+            >
+              {mostrarPasswords ? (
+                <EyeOff size={18} />
+              ) : (
+                <Eye size={18} />
+              )}
+
+              {mostrarPasswords
+                ? "Ocultar contraseñas"
+                : "Mostrar contraseñas"}
+            </button>
+
+            <button
+              type="submit"
+              disabled={cambiandoPassword}
+              className="flex items-center justify-center gap-2 rounded-xl bg-red-700 px-6 py-3 font-semibold text-white hover:bg-red-800 disabled:opacity-60"
+            >
+              {cambiandoPassword && (
+                <LoaderCircle
+                  size={19}
+                  className="animate-spin"
+                />
+              )}
+
+              {cambiandoPassword
+                ? "Actualizando..."
+                : "Cambiar contraseña"}
+            </button>
+          </div>
+
+          {errorPassword && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 lg:col-span-3">
+              {errorPassword}
+            </div>
+          )}
+
+          {mensajePassword && (
+            <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-green-700 lg:col-span-3">
+              {mensajePassword}
+            </div>
+          )}
+        </form>
       </div>
 
       {error && !modalAbierto && (
@@ -672,6 +875,34 @@ function Settings() {
         </div>
       )}
     </section>
+  );
+}
+
+function CampoPassword({
+  titulo,
+  nombre,
+  valor,
+  cambiar,
+  mostrar,
+  autoComplete,
+}) {
+  return (
+    <label>
+      <span className="mb-2 block text-sm font-semibold text-gray-700">
+        {titulo} *
+      </span>
+
+      <input
+        type={mostrar ? "text" : "password"}
+        name={nombre}
+        value={valor}
+        onChange={cambiar}
+        maxLength={72}
+        autoComplete={autoComplete}
+        required
+        className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-red-600"
+      />
+    </label>
   );
 }
 
