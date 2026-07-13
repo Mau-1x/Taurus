@@ -6,12 +6,23 @@ import {
   LoaderCircle,
   AlertCircle,
   ImageOff,
+  Eye,
+  MessageCircle,
+  X,
+  ArrowUpDown,
+  BadgeCheck,
+  RefreshCcw,
+  Headphones,
 } from "lucide-react";
 
 import {
   obtenerProductos,
   obtenerCategorias,
 } from "../../services/productoService";
+
+const WHATSAPP_NUMBER = String(
+  import.meta.env.VITE_WHATSAPP_NUMBER || ""
+).replace(/\D/g, "");
 
 function Products() {
   const [productos, setProductos] = useState([]);
@@ -20,6 +31,10 @@ function Products() {
   const [busqueda, setBusqueda] = useState("");
   const [categoriaSeleccionada, setCategoriaSeleccionada] =
     useState("");
+  const [orden, setOrden] = useState("recientes");
+
+  const [productoDetalle, setProductoDetalle] =
+    useState(null);
 
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -56,7 +71,7 @@ function Products() {
   const productosFiltrados = useMemo(() => {
     const texto = busqueda.toLowerCase().trim();
 
-    return productos.filter((producto) => {
+    const resultado = productos.filter((producto) => {
       const coincideTexto =
         !texto ||
         producto.NOMBRE?.toLowerCase().includes(texto) ||
@@ -72,7 +87,72 @@ function Products() {
 
       return coincideTexto && coincideCategoria;
     });
-  }, [productos, busqueda, categoriaSeleccionada]);
+
+    return [...resultado].sort((productoA, productoB) => {
+      switch (orden) {
+        case "precio-menor":
+          return (
+            Number(productoA.PRECIO_VENTA) -
+            Number(productoB.PRECIO_VENTA)
+          );
+
+        case "precio-mayor":
+          return (
+            Number(productoB.PRECIO_VENTA) -
+            Number(productoA.PRECIO_VENTA)
+          );
+
+        case "nombre":
+          return String(productoA.NOMBRE).localeCompare(
+            String(productoB.NOMBRE),
+            "es"
+          );
+
+        case "stock":
+          return (
+            Number(productoB.STOCK) -
+            Number(productoA.STOCK)
+          );
+
+        case "recientes":
+        default:
+          return (
+            Number(productoB.IDPRODUCTO) -
+            Number(productoA.IDPRODUCTO)
+          );
+      }
+    });
+  }, [
+    productos,
+    busqueda,
+    categoriaSeleccionada,
+    orden,
+  ]);
+
+  function consultarWhatsApp(producto = null) {
+    if (!WHATSAPP_NUMBER) {
+      window.alert(
+        "El número de WhatsApp todavía no está configurado."
+      );
+      return;
+    }
+
+    const mensaje = producto
+      ? `Hola, quisiera consultar por el producto ${producto.NOMBRE} (${producto.CODIGO}). Precio mostrado: S/ ${Number(
+          producto.PRECIO_VENTA
+        ).toFixed(2)}.`
+      : "Hola, estoy buscando un producto o accesorio para mi dispositivo. Quisiera consultar la disponibilidad.";
+
+    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+      mensaje
+    )}`;
+
+    window.open(
+      url,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -88,8 +168,8 @@ function Products() {
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl text-lg text-gray-300">
-            Encuentra cargadores, pantallas, baterías, micas,
-            repuestos y accesorios disponibles.
+            Encuentra cargadores, pantallas, baterías,
+            micas, repuestos y accesorios disponibles.
           </p>
         </div>
       </section>
@@ -97,8 +177,8 @@ function Products() {
       <section className="py-16">
         <div className="mx-auto max-w-7xl px-6">
           <div className="rounded-3xl bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row">
-              <div className="relative flex-1">
+            <div className="grid gap-4 lg:grid-cols-[1fr_230px_230px]">
+              <div className="relative">
                 <Search
                   size={20}
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
@@ -136,6 +216,41 @@ function Products() {
                   </option>
                 ))}
               </select>
+
+              <div className="relative">
+                <ArrowUpDown
+                  size={18}
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+
+                <select
+                  value={orden}
+                  onChange={(evento) =>
+                    setOrden(evento.target.value)
+                  }
+                  className="w-full appearance-none rounded-xl border border-gray-300 py-3 pl-11 pr-4 outline-none focus:border-red-600"
+                >
+                  <option value="recientes">
+                    Más recientes
+                  </option>
+
+                  <option value="precio-menor">
+                    Menor precio
+                  </option>
+
+                  <option value="precio-mayor">
+                    Mayor precio
+                  </option>
+
+                  <option value="nombre">
+                    Nombre A-Z
+                  </option>
+
+                  <option value="stock">
+                    Mayor stock
+                  </option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -157,7 +272,8 @@ function Products() {
             <>
               <div className="mt-8 flex items-center gap-2 text-sm text-gray-500">
                 <Package size={19} />
-                {productosFiltrados.length} productos disponibles
+                {productosFiltrados.length} productos
+                disponibles
               </div>
 
               <div className="mt-6 grid gap-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -165,6 +281,12 @@ function Products() {
                   <TarjetaProducto
                     key={producto.IDPRODUCTO}
                     producto={producto}
+                    verDetalle={() =>
+                      setProductoDetalle(producto)
+                    }
+                    consultar={() =>
+                      consultarWhatsApp(producto)
+                    }
                   />
                 ))}
               </div>
@@ -187,13 +309,77 @@ function Products() {
               )}
             </>
           )}
+
+          <section className="mt-16 overflow-hidden rounded-3xl bg-black px-7 py-10 text-white md:px-12">
+            <div className="flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wider text-red-400">
+                  Atención personalizada
+                </p>
+
+                <h2 className="mt-3 text-3xl font-bold">
+                  ¿No encuentras el producto que
+                  necesitas?
+                </h2>
+
+                <p className="mt-3 max-w-2xl text-gray-300">
+                  Indícanos la marca y el modelo de tu
+                  dispositivo. Revisaremos la
+                  disponibilidad y el precio.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => consultarWhatsApp()}
+                className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-green-600 px-6 py-4 font-bold text-white transition hover:bg-green-700"
+              >
+                <MessageCircle size={21} />
+                Consultar por WhatsApp
+              </button>
+            </div>
+          </section>
+
+          <section className="mt-10 grid gap-5 md:grid-cols-3">
+            <Beneficio
+              icono={BadgeCheck}
+              titulo="Productos verificados"
+              descripcion="Revisamos el estado y las características de nuestros productos."
+            />
+
+            <Beneficio
+              icono={RefreshCcw}
+              titulo="Stock actualizado"
+              descripcion="El catálogo muestra únicamente productos con disponibilidad."
+            />
+
+            <Beneficio
+              icono={Headphones}
+              titulo="Asesoría personalizada"
+              descripcion="Te ayudamos a comprobar la compatibilidad con tu equipo."
+            />
+          </section>
         </div>
       </section>
+
+      {productoDetalle && (
+        <ModalProducto
+          producto={productoDetalle}
+          cerrar={() => setProductoDetalle(null)}
+          consultar={() =>
+            consultarWhatsApp(productoDetalle)
+          }
+        />
+      )}
     </main>
   );
 }
 
-function TarjetaProducto({ producto }) {
+function TarjetaProducto({
+  producto,
+  verDetalle,
+  consultar,
+}) {
   const compatibilidad = [
     producto.MARCA,
     producto.MODELO,
@@ -202,7 +388,7 @@ function TarjetaProducto({ producto }) {
     .join(" ");
 
   return (
-    <article className="group overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+    <article className="group flex flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
       <div className="relative flex h-56 items-center justify-center overflow-hidden bg-gray-100">
         {producto.IMAGEN ? (
           <img
@@ -211,8 +397,13 @@ function TarjetaProducto({ producto }) {
             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
             onError={(evento) => {
               evento.currentTarget.style.display = "none";
-              evento.currentTarget.nextElementSibling.style.display =
-                "flex";
+
+              if (
+                evento.currentTarget.nextElementSibling
+              ) {
+                evento.currentTarget.nextElementSibling.style.display =
+                  "flex";
+              }
             }}
           />
         ) : null}
@@ -222,7 +413,10 @@ function TarjetaProducto({ producto }) {
             producto.IMAGEN ? "hidden" : "flex"
           }`}
         >
-          <ImageOff size={48} className="text-gray-300" />
+          <ImageOff
+            size={48}
+            className="text-gray-300"
+          />
         </div>
 
         <span className="absolute left-4 top-4 rounded-full bg-black/80 px-3 py-1 text-xs font-semibold text-white">
@@ -230,7 +424,7 @@ function TarjetaProducto({ producto }) {
         </span>
       </div>
 
-      <div className="p-6">
+      <div className="flex flex-1 flex-col p-6">
         <p className="text-xs font-bold uppercase tracking-wider text-red-700">
           {producto.CODIGO}
         </p>
@@ -240,7 +434,8 @@ function TarjetaProducto({ producto }) {
         </h2>
 
         <p className="mt-2 line-clamp-2 min-h-[48px] text-sm leading-6 text-gray-600">
-          {producto.DESCRIPCION || "Producto disponible en Taurus."}
+          {producto.DESCRIPCION ||
+            "Producto disponible en Taurus."}
         </p>
 
         <div className="mt-4">
@@ -260,7 +455,10 @@ function TarjetaProducto({ producto }) {
             </p>
 
             <p className="text-2xl font-bold text-red-700">
-              S/ {Number(producto.PRECIO_VENTA).toFixed(2)}
+              S/{" "}
+              {Number(
+                producto.PRECIO_VENTA
+              ).toFixed(2)}
             </p>
           </div>
 
@@ -268,7 +466,188 @@ function TarjetaProducto({ producto }) {
             Stock: {producto.STOCK}
           </span>
         </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={verDetalle}
+            className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-3 py-3 text-sm font-bold text-gray-700 transition hover:bg-gray-100"
+          >
+            <Eye size={18} />
+            Ver detalles
+          </button>
+
+          <button
+            type="button"
+            onClick={consultar}
+            className="flex items-center justify-center gap-2 rounded-xl bg-green-600 px-3 py-3 text-sm font-bold text-white transition hover:bg-green-700"
+          >
+            <MessageCircle size={18} />
+            Consultar
+          </button>
+        </div>
       </div>
+    </article>
+  );
+}
+
+function ModalProducto({
+  producto,
+  cerrar,
+  consultar,
+}) {
+  const compatibilidad = [
+    producto.MARCA,
+    producto.MODELO,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4"
+      onMouseDown={cerrar}
+    >
+      <article
+        className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white shadow-2xl"
+        onMouseDown={(evento) =>
+          evento.stopPropagation()
+        }
+      >
+        <header className="flex items-center justify-between border-b px-6 py-5">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-wider text-red-700">
+              {producto.CODIGO}
+            </p>
+
+            <h2 className="mt-1 text-2xl font-bold text-gray-900">
+              {producto.NOMBRE}
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={cerrar}
+            className="rounded-xl p-2 text-gray-500 transition hover:bg-gray-100"
+          >
+            <X size={25} />
+          </button>
+        </header>
+
+        <div className="grid gap-8 p-6 md:grid-cols-2">
+          <div className="flex min-h-[320px] items-center justify-center overflow-hidden rounded-2xl bg-gray-100">
+            {producto.IMAGEN ? (
+              <img
+                src={producto.IMAGEN}
+                alt={producto.NOMBRE}
+                className="h-full max-h-[430px] w-full object-contain"
+              />
+            ) : (
+              <ImageOff
+                size={70}
+                className="text-gray-300"
+              />
+            )}
+          </div>
+
+          <div>
+            <span className="inline-flex rounded-full bg-gray-900 px-3 py-1 text-sm font-semibold text-white">
+              {producto.CATEGORIA}
+            </span>
+
+            <p className="mt-5 leading-7 text-gray-600">
+              {producto.DESCRIPCION ||
+                "Producto disponible en Taurus."}
+            </p>
+
+            <div className="mt-7 space-y-4 rounded-2xl bg-gray-50 p-5">
+              <DatoProducto
+                titulo="Marca"
+                valor={
+                  producto.MARCA || "No especificada"
+                }
+              />
+
+              <DatoProducto
+                titulo="Modelo"
+                valor={
+                  producto.MODELO || "Universal"
+                }
+              />
+
+              <DatoProducto
+                titulo="Compatibilidad"
+                valor={
+                  compatibilidad || "Universal"
+                }
+              />
+
+              <DatoProducto
+                titulo="Disponibilidad"
+                valor={`${producto.STOCK} unidades`}
+              />
+            </div>
+
+            <div className="mt-7">
+              <p className="text-sm text-gray-500">
+                Precio
+              </p>
+
+              <p className="text-4xl font-bold text-red-700">
+                S/{" "}
+                {Number(
+                  producto.PRECIO_VENTA
+                ).toFixed(2)}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={consultar}
+              className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-6 py-4 font-bold text-white transition hover:bg-green-700"
+            >
+              <MessageCircle size={21} />
+              Consultar por WhatsApp
+            </button>
+          </div>
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function DatoProducto({ titulo, valor }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-gray-200 pb-3 last:border-0 last:pb-0">
+      <span className="text-sm text-gray-500">
+        {titulo}
+      </span>
+
+      <span className="text-right font-semibold text-gray-900">
+        {valor}
+      </span>
+    </div>
+  );
+}
+
+function Beneficio({
+  icono: Icono,
+  titulo,
+  descripcion,
+}) {
+  return (
+    <article className="rounded-2xl bg-white p-6 shadow-sm">
+      <div className="inline-flex rounded-xl bg-red-100 p-3 text-red-700">
+        <Icono size={24} />
+      </div>
+
+      <h3 className="mt-4 text-lg font-bold text-gray-900">
+        {titulo}
+      </h3>
+
+      <p className="mt-2 leading-6 text-gray-600">
+        {descripcion}
+      </p>
     </article>
   );
 }
