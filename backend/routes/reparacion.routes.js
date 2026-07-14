@@ -9,6 +9,10 @@ const {
   permitirRoles,
 } = require("../middlewares/auth.middleware");
 
+const upload = require(
+  "../middlewares/upload.middleware"
+);
+
 const router = express.Router();
 
 /*
@@ -39,6 +43,27 @@ router.get(
 router.get(
   "/:id/historial",
   ReparacionController.obtenerHistorial
+);
+
+router.get(
+  "/:id/fotos",
+  ReparacionController.obtenerFotos
+);
+
+router.post(
+  "/:id/fotos",
+  upload.single("foto"),
+  ReparacionController.subirFoto
+);
+
+router.patch(
+  "/:id/fotos/:idFoto",
+  ReparacionController.actualizarFoto
+);
+
+router.delete(
+  "/:id/fotos/:idFoto",
+  ReparacionController.eliminarFoto
 );
 
 router.get(

@@ -15,6 +15,11 @@ import {
   FileDown,
   MessageCircle,
   Send,
+  Images,
+  ImagePlus,
+  Eye,
+  EyeOff,
+  ExternalLink,
 } from "lucide-react";
 
 import { obtenerProductos } from "../../../services/productoService";
@@ -35,6 +40,10 @@ import {
   obtenerPagosReparacion,
   registrarPagoReparacion,
   anularPagoReparacion,
+  obtenerFotosReparacion,
+  subirFotoReparacion,
+  actualizarFotoReparacion,
+  eliminarFotoReparacion,
 } from "../../../services/reparacionAdminService";
 
 const formularioInicial = {
@@ -144,6 +153,42 @@ function Repairs() {
     errorWhatsApp,
     setErrorWhatsApp,
   ] = useState("");
+
+  const [modalFotos, setModalFotos] =
+    useState(false);
+
+  const [reparacionFotos, setReparacionFotos] =
+    useState(null);
+
+  const [fotosReparacion, setFotosReparacion] =
+    useState([]);
+
+  const [tipoFoto, setTipoFoto] =
+    useState("ANTES");
+
+  const [descripcionFoto, setDescripcionFoto] =
+    useState("");
+
+  const [visibleClienteFoto, setVisibleClienteFoto] =
+    useState(true);
+
+  const [archivoFoto, setArchivoFoto] =
+    useState(null);
+
+  const [vistaPreviaFoto, setVistaPreviaFoto] =
+    useState("");
+
+  const [cargandoFotos, setCargandoFotos] =
+    useState(false);
+
+  const [subiendoFoto, setSubiendoFoto] =
+    useState(false);
+
+  const [actualizandoFoto, setActualizandoFoto] =
+    useState(null);
+
+  const [errorFotos, setErrorFotos] =
+    useState("");
 
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -676,6 +721,179 @@ async function guardarPago(evento) {
     }
   }
 
+  async function abrirFotos(reparacion) {
+    try {
+      setReparacionFotos(reparacion);
+      setFotosReparacion([]);
+      setTipoFoto("ANTES");
+      setDescripcionFoto("");
+      setVisibleClienteFoto(true);
+      limpiarArchivoFoto();
+      setErrorFotos("");
+      setModalFotos(true);
+      setCargandoFotos(true);
+
+      const datos = await obtenerFotosReparacion(
+        reparacion.IDREPARACION
+      );
+
+      setFotosReparacion(datos);
+    } catch (errorCarga) {
+      setErrorFotos(errorCarga.message);
+    } finally {
+      setCargandoFotos(false);
+    }
+  }
+
+  async function recargarFotos() {
+    if (!reparacionFotos) return;
+
+    const datos = await obtenerFotosReparacion(
+      reparacionFotos.IDREPARACION
+    );
+
+    setFotosReparacion(datos);
+  }
+
+  function limpiarArchivoFoto() {
+    if (vistaPreviaFoto) {
+      URL.revokeObjectURL(vistaPreviaFoto);
+    }
+
+    setArchivoFoto(null);
+    setVistaPreviaFoto("");
+  }
+
+  function seleccionarArchivoFoto(evento) {
+    const archivo = evento.target.files?.[0];
+
+    setErrorFotos("");
+    limpiarArchivoFoto();
+
+    if (!archivo) return;
+
+    const tiposPermitidos = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!tiposPermitidos.includes(archivo.type)) {
+      evento.target.value = "";
+      setErrorFotos(
+        "Solo se permiten imágenes JPG, PNG o WEBP."
+      );
+      return;
+    }
+
+    if (archivo.size > 5 * 1024 * 1024) {
+      evento.target.value = "";
+      setErrorFotos(
+        "La imagen no puede superar los 5 MB."
+      );
+      return;
+    }
+
+    setArchivoFoto(archivo);
+    setVistaPreviaFoto(URL.createObjectURL(archivo));
+  }
+
+  async function guardarFoto(evento) {
+    evento.preventDefault();
+
+    if (!archivoFoto) {
+      setErrorFotos("Selecciona una imagen.");
+      return;
+    }
+
+    if (descripcionFoto.trim().length > 300) {
+      setErrorFotos(
+        "La descripción no puede superar los 300 caracteres."
+      );
+      return;
+    }
+
+    try {
+      setSubiendoFoto(true);
+      setErrorFotos("");
+
+      await subirFotoReparacion(
+        reparacionFotos.IDREPARACION,
+        {
+          foto: archivoFoto,
+          tipo: tipoFoto,
+          descripcion:
+            descripcionFoto.trim() || null,
+          visibleCliente: visibleClienteFoto,
+        }
+      );
+
+      await recargarFotos();
+
+      setDescripcionFoto("");
+      setVisibleClienteFoto(true);
+      limpiarArchivoFoto();
+    } catch (errorSubida) {
+      setErrorFotos(errorSubida.message);
+    } finally {
+      setSubiendoFoto(false);
+    }
+  }
+
+  async function alternarVisibilidadFoto(foto) {
+    try {
+      setActualizandoFoto(foto.IDFOTO);
+      setErrorFotos("");
+
+      await actualizarFotoReparacion(
+        reparacionFotos.IDREPARACION,
+        foto.IDFOTO,
+        {
+          visibleCliente:
+            !Boolean(foto.VISIBLE_CLIENTE),
+        }
+      );
+
+      await recargarFotos();
+    } catch (errorActualizacion) {
+      setErrorFotos(errorActualizacion.message);
+    } finally {
+      setActualizandoFoto(null);
+    }
+  }
+
+  async function borrarFoto(foto) {
+    const confirmar = window.confirm(
+      "¿Deseas eliminar esta foto de la reparación?"
+    );
+
+    if (!confirmar) return;
+
+    try {
+      setActualizandoFoto(foto.IDFOTO);
+      setErrorFotos("");
+
+      await eliminarFotoReparacion(
+        reparacionFotos.IDREPARACION,
+        foto.IDFOTO
+      );
+
+      await recargarFotos();
+    } catch (errorEliminacion) {
+      setErrorFotos(errorEliminacion.message);
+    } finally {
+      setActualizandoFoto(null);
+    }
+  }
+
+  function cerrarFotos() {
+    limpiarArchivoFoto();
+    setModalFotos(false);
+    setReparacionFotos(null);
+    setFotosReparacion([]);
+    setErrorFotos("");
+  }
+
   async function abrirWhatsApp(reparacion) {
     const numero = normalizarNumeroWhatsApp(
       reparacion.CELULAR
@@ -773,7 +991,8 @@ async function guardarPago(evento) {
         !modalEstado &&
         !modalRepuestos &&
         !modalPagos &&
-        !modalWhatsApp && (
+        !modalWhatsApp &&
+        !modalFotos && (
         <div className="mt-6 rounded-xl bg-red-50 p-4 text-red-700">
           {error}
         </div>
@@ -884,6 +1103,16 @@ async function guardarPago(evento) {
 
                     <td className="py-4">
                       <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() =>
+                            abrirFotos(reparacion)
+                          }
+                          title="Fotos de la reparación"
+                          className="rounded-lg bg-sky-50 p-2 text-sky-700 hover:bg-sky-100"
+                        >
+                          <Images size={18} />
+                        </button>
+
                         <button
                           onClick={() =>
                             abrirWhatsApp(reparacion)
@@ -1041,6 +1270,31 @@ async function guardarPago(evento) {
         />
       )}
 
+      {modalFotos && (
+        <ModalFotos
+          reparacion={reparacionFotos}
+          fotos={fotosReparacion}
+          tipo={tipoFoto}
+          setTipo={setTipoFoto}
+          descripcion={descripcionFoto}
+          setDescripcion={setDescripcionFoto}
+          visibleCliente={visibleClienteFoto}
+          setVisibleCliente={setVisibleClienteFoto}
+          archivo={archivoFoto}
+          vistaPrevia={vistaPreviaFoto}
+          cargando={cargandoFotos}
+          subiendo={subiendoFoto}
+          actualizando={actualizandoFoto}
+          error={errorFotos}
+          seleccionarArchivo={seleccionarArchivoFoto}
+          guardar={guardarFoto}
+          alternarVisibilidad={alternarVisibilidadFoto}
+          eliminar={borrarFoto}
+          limpiarArchivo={limpiarArchivoFoto}
+          cerrar={cerrarFotos}
+        />
+      )}
+
       {modalWhatsApp && (
         <ModalWhatsApp
           reparacion={reparacionWhatsApp}
@@ -1059,6 +1313,405 @@ async function guardarPago(evento) {
         />
       )}
     </section>
+  );
+}
+
+function ModalFotos({
+  reparacion,
+  fotos,
+  tipo,
+  setTipo,
+  descripcion,
+  setDescripcion,
+  visibleCliente,
+  setVisibleCliente,
+  archivo,
+  vistaPrevia,
+  cargando,
+  subiendo,
+  actualizando,
+  error,
+  seleccionarArchivo,
+  guardar,
+  alternarVisibilidad,
+  eliminar,
+  limpiarArchivo,
+  cerrar,
+}) {
+  const grupos = [
+    {
+      tipo: "ANTES",
+      titulo: "Antes de reparar",
+      descripcion:
+        "Estado del equipo cuando fue recibido.",
+    },
+    {
+      tipo: "DIAGNOSTICO",
+      titulo: "Diagnóstico",
+      descripcion:
+        "Daños encontrados durante la revisión.",
+    },
+    {
+      tipo: "DESPUES",
+      titulo: "Después de reparar",
+      descripcion:
+        "Resultado final del trabajo realizado.",
+    },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/70 p-4">
+      <div className="max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-6 py-5 sm:px-7">
+          <div>
+            <div className="flex items-center gap-2">
+              <Images
+                size={24}
+                className="text-sky-700"
+              />
+
+              <h2 className="text-2xl font-bold text-gray-950">
+                Evidencias fotográficas
+              </h2>
+            </div>
+
+            <p className="mt-1 text-sm text-gray-500">
+              {reparacion?.CODIGO} — {reparacion?.MARCA}{" "}
+              {reparacion?.MODELO}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={cerrar}
+            className="rounded-xl p-2 text-gray-500 transition hover:bg-gray-100"
+          >
+            <X size={25} />
+          </button>
+        </div>
+
+        <div className="grid gap-7 p-6 lg:grid-cols-[360px_1fr] lg:p-7">
+          <form
+            onSubmit={guardar}
+            className="h-fit rounded-2xl border border-gray-200 bg-gray-50 p-5 lg:sticky lg:top-24"
+          >
+            <div className="flex items-center gap-2">
+              <ImagePlus
+                size={21}
+                className="text-sky-700"
+              />
+
+              <h3 className="text-lg font-bold text-gray-950">
+                Agregar fotografía
+              </h3>
+            </div>
+
+            <label className="mt-5 block">
+              <span className="mb-2 block text-sm font-semibold">
+                Etapa de la reparación
+              </span>
+
+              <select
+                value={tipo}
+                onChange={(evento) =>
+                  setTipo(evento.target.value)
+                }
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-sky-600"
+              >
+                <option value="ANTES">Antes</option>
+                <option value="DIAGNOSTICO">
+                  Diagnóstico
+                </option>
+                <option value="DESPUES">Después</option>
+              </select>
+            </label>
+
+            <label className="mt-4 block">
+              <span className="mb-2 block text-sm font-semibold">
+                Imagen *
+              </span>
+
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={seleccionarArchivo}
+                className="block w-full cursor-pointer rounded-xl border border-gray-300 bg-white text-sm file:mr-3 file:border-0 file:bg-sky-700 file:px-4 file:py-3 file:font-semibold file:text-white hover:file:bg-sky-800"
+              />
+
+              <p className="mt-2 text-xs text-gray-500">
+                JPG, PNG o WEBP. Máximo 5 MB.
+              </p>
+            </label>
+
+            {vistaPrevia && (
+              <div className="relative mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                <img
+                  src={vistaPrevia}
+                  alt="Vista previa"
+                  className="h-52 w-full object-contain"
+                />
+
+                <button
+                  type="button"
+                  onClick={limpiarArchivo}
+                  className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white"
+                  title="Quitar imagen"
+                >
+                  <X size={17} />
+                </button>
+              </div>
+            )}
+
+            <label className="mt-4 block">
+              <span className="mb-2 flex items-center justify-between text-sm font-semibold">
+                <span>Descripción</span>
+                <span className="text-xs font-normal text-gray-500">
+                  {descripcion.length}/300
+                </span>
+              </span>
+
+              <textarea
+                value={descripcion}
+                onChange={(evento) =>
+                  setDescripcion(
+                    evento.target.value.slice(0, 300)
+                  )
+                }
+                rows="3"
+                maxLength={300}
+                placeholder="Ejemplo: pantalla rota al recibir el equipo"
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-sky-600"
+              />
+            </label>
+
+            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-white p-4">
+              <input
+                type="checkbox"
+                checked={visibleCliente}
+                onChange={(evento) =>
+                  setVisibleCliente(evento.target.checked)
+                }
+                className="mt-1 h-4 w-4 accent-sky-700"
+              />
+
+              <span>
+                <span className="block font-semibold text-gray-900">
+                  Visible para el cliente
+                </span>
+
+                <span className="mt-1 block text-sm text-gray-500">
+                  Aparecerá en el seguimiento público por DNI.
+                </span>
+              </span>
+            </label>
+
+            {error && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={subiendo || !archivo}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-700 px-5 py-3 font-semibold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {subiendo ? (
+                <LoaderCircle
+                  size={19}
+                  className="animate-spin"
+                />
+              ) : (
+                <ImagePlus size={19} />
+              )}
+
+              {subiendo ? "Subiendo..." : "Guardar foto"}
+            </button>
+          </form>
+
+          <div>
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+              <div>
+                <p className="text-sm font-semibold text-sky-700">
+                  Galería de la reparación
+                </p>
+
+                <h3 className="mt-1 text-2xl font-black text-gray-950">
+                  {fotos.length === 1
+                    ? "1 fotografía registrada"
+                    : `${fotos.length} fotografías registradas`}
+                </h3>
+              </div>
+
+              <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-600">
+                <Eye size={17} />
+                {
+                  fotos.filter((foto) =>
+                    Boolean(foto.VISIBLE_CLIENTE)
+                  ).length
+                }{" "}
+                visibles al cliente
+              </div>
+            </div>
+
+            {cargando ? (
+              <div className="flex justify-center py-24">
+                <LoaderCircle
+                  size={40}
+                  className="animate-spin text-sky-700"
+                />
+              </div>
+            ) : fotos.length === 0 ? (
+              <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-gray-50 py-16 text-center text-gray-500">
+                <Images
+                  size={44}
+                  className="mx-auto text-gray-300"
+                />
+
+                <p className="mt-3 font-semibold">
+                  Todavía no hay fotografías
+                </p>
+
+                <p className="mt-1 text-sm">
+                  Registra el estado antes, durante y después de la reparación.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-6 space-y-8">
+                {grupos.map((grupo) => {
+                  const fotosGrupo = fotos.filter(
+                    (foto) => foto.TIPO === grupo.tipo
+                  );
+
+                  return (
+                    <section key={grupo.tipo}>
+                      <div className="flex items-end justify-between gap-4 border-b border-gray-200 pb-3">
+                        <div>
+                          <h4 className="font-bold text-gray-950">
+                            {grupo.titulo}
+                          </h4>
+
+                          <p className="mt-1 text-sm text-gray-500">
+                            {grupo.descripcion}
+                          </p>
+                        </div>
+
+                        <span className="rounded-full bg-sky-50 px-3 py-1 text-sm font-bold text-sky-700">
+                          {fotosGrupo.length}
+                        </span>
+                      </div>
+
+                      {fotosGrupo.length === 0 ? (
+                        <p className="py-6 text-sm text-gray-400">
+                          Sin fotografías en esta etapa.
+                        </p>
+                      ) : (
+                        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                          {fotosGrupo.map((foto) => (
+                            <article
+                              key={foto.IDFOTO}
+                              className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+                            >
+                              <a
+                                href={foto.URL}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="group relative block h-52 bg-gray-100"
+                              >
+                                <img
+                                  src={foto.URL}
+                                  alt={
+                                    foto.DESCRIPCION ||
+                                    `Foto ${foto.TIPO}`
+                                  }
+                                  className="h-full w-full object-contain transition group-hover:scale-[1.02]"
+                                />
+
+                                <span className="absolute right-3 top-3 rounded-full bg-black/70 p-2 text-white opacity-0 transition group-hover:opacity-100">
+                                  <ExternalLink size={17} />
+                                </span>
+                              </a>
+
+                              <div className="p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                  <p className="line-clamp-2 min-h-10 text-sm text-gray-700">
+                                    {foto.DESCRIPCION ||
+                                      "Sin descripción"}
+                                  </p>
+
+                                  <span
+                                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${
+                                      foto.VISIBLE_CLIENTE
+                                        ? "bg-emerald-100 text-emerald-700"
+                                        : "bg-gray-100 text-gray-600"
+                                    }`}
+                                  >
+                                    {foto.VISIBLE_CLIENTE
+                                      ? "Pública"
+                                      : "Interna"}
+                                  </span>
+                                </div>
+
+                                <p className="mt-3 text-xs text-gray-400">
+                                  {formatearFechaHora(
+                                    foto.FECHA_REGISTRO
+                                  )}
+                                </p>
+
+                                <div className="mt-4 grid grid-cols-2 gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      alternarVisibilidad(foto)
+                                    }
+                                    disabled={
+                                      actualizando === foto.IDFOTO
+                                    }
+                                    className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                                  >
+                                    {actualizando ===
+                                    foto.IDFOTO ? (
+                                      <LoaderCircle
+                                        size={17}
+                                        className="animate-spin"
+                                      />
+                                    ) : foto.VISIBLE_CLIENTE ? (
+                                      <EyeOff size={17} />
+                                    ) : (
+                                      <Eye size={17} />
+                                    )}
+
+                                    {foto.VISIBLE_CLIENTE
+                                      ? "Ocultar"
+                                      : "Mostrar"}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => eliminar(foto)}
+                                    disabled={
+                                      actualizando === foto.IDFOTO
+                                    }
+                                    className="flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+                                  >
+                                    <Trash2 size={17} />
+                                    Eliminar
+                                  </button>
+                                </div>
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

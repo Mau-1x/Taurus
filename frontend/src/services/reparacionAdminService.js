@@ -5,7 +5,15 @@ const API_URL = `${
 }/api/reparaciones`;
 
 async function procesarRespuesta(respuesta) {
-  const resultado = await respuesta.json();
+  let resultado;
+
+  try {
+    resultado = await respuesta.json();
+  } catch {
+    throw new Error(
+      "El servidor devolvió una respuesta no válida"
+    );
+  }
 
   if (!respuesta.ok) {
     throw new Error(
@@ -153,3 +161,74 @@ export async function anularPagoReparacion(
 
   return procesarRespuesta(respuesta);
 }
+
+export async function obtenerFotosReparacion(
+  idReparacion
+) {
+  const respuesta = await apiFetch(
+    `${API_URL}/${idReparacion}/fotos`
+  );
+
+  const resultado = await procesarRespuesta(respuesta);
+
+  return resultado.data;
+}
+
+export async function subirFotoReparacion(
+  idReparacion,
+  datos
+) {
+  const formulario = new FormData();
+
+  formulario.append("foto", datos.foto);
+  formulario.append("tipo", datos.tipo);
+  formulario.append(
+    "descripcion",
+    datos.descripcion || ""
+  );
+  formulario.append(
+    "visibleCliente",
+    String(Boolean(datos.visibleCliente))
+  );
+
+  const respuesta = await apiFetch(
+    `${API_URL}/${idReparacion}/fotos`,
+    {
+      method: "POST",
+      body: formulario,
+    }
+  );
+
+  return procesarRespuesta(respuesta);
+}
+
+export async function actualizarFotoReparacion(
+  idReparacion,
+  idFoto,
+  datos
+) {
+  const respuesta = await apiFetch(
+    `${API_URL}/${idReparacion}/fotos/${idFoto}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(datos),
+    }
+  );
+
+  return procesarRespuesta(respuesta);
+}
+
+export async function eliminarFotoReparacion(
+  idReparacion,
+  idFoto
+) {
+  const respuesta = await apiFetch(
+    `${API_URL}/${idReparacion}/fotos/${idFoto}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  return procesarRespuesta(respuesta);
+}
+  

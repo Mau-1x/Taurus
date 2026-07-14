@@ -1,7 +1,82 @@
 const ReparacionModel = require("../models/reparacion.model");
+const cloudinary = require("../config/cloudinary");
 const {
   registrarAuditoria,
 } = require("../utils/auditoria");
+
+
+
+const TIPOS_FOTO_REPARACION = [
+  "ANTES",
+  "DIAGNOSTICO",
+  "DESPUES",
+];
+
+function subirImagenCloudinary(
+  buffer,
+  idReparacion
+) {
+  return new Promise((resolve, reject) => {
+    const stream =
+      cloudinary.uploader.upload_stream(
+        {
+          folder:
+            `taurus/reparaciones/${idReparacion}`,
+          resource_type: "image",
+          transformation: [
+            {
+              width: 1600,
+              height: 1600,
+              crop: "limit",
+              quality: "auto",
+              fetch_format: "auto",
+            },
+          ],
+        },
+        (error, resultado) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+
+          resolve(resultado);
+        }
+      );
+
+    stream.end(buffer);
+  });
+}
+
+function convertirBooleano(valor) {
+  if (
+    valor === true ||
+    valor === 1 ||
+    valor === "1" ||
+    String(valor).toLowerCase() === "true"
+  ) {
+    return true;
+  }
+
+  if (
+    valor === false ||
+    valor === 0 ||
+    valor === "0" ||
+    String(valor).toLowerCase() === "false"
+  ) {
+    return false;
+  }
+
+  return null;
+}
+
+function validarIdPositivo(valor) {
+  const numero = Number(valor);
+
+  return (
+    Number.isInteger(numero) &&
+    numero > 0
+  );
+}
 
 async function registrarAuditoriaSegura(datos) {
   try {
@@ -189,18 +264,26 @@ class ReparacionController {
       const resultados = await Promise.all(
         reparaciones.map(
           async (reparacion) => {
-            const [historial, repuestos] =
-              await Promise.all([
-                ReparacionModel
-                  .obtenerHistorialPublico(
-                    reparacion.IDREPARACION
-                  ),
+            const [
+              historial,
+              repuestos,
+              fotos,
+            ] = await Promise.all([
+              ReparacionModel
+                .obtenerHistorialPublico(
+                  reparacion.IDREPARACION
+                ),
 
-                ReparacionModel
-                  .obtenerRepuestosPublicos(
-                    reparacion.IDREPARACION
-                  ),
-              ]);
+              ReparacionModel
+                .obtenerRepuestosPublicos(
+                  reparacion.IDREPARACION
+                ),
+
+              ReparacionModel
+                .obtenerFotosPublicas(
+                  reparacion.IDREPARACION
+                ),
+            ]);
 
             const reparacionPublica = {
               ...reparacion,
@@ -212,6 +295,7 @@ class ReparacionController {
               reparacion: reparacionPublica,
               historial,
               repuestos,
+              fotos,
             };
           }
         )
@@ -1015,6 +1099,461 @@ static async agregarRepuesto(req, res) {
         ok: false,
         message:
           "No se pudo anular el pago",
+      });
+    }
+  }
+
+
+  static async obtenerFotos(req, res) {
+    try {
+      const idReparacion = Number(
+        req.params.id
+      );
+
+      if (!validarIdPositivo(idReparacion)) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La reparación no es válida",
+        });
+      }
+
+      const reparacion =
+        await ReparacionModel.obtenerPorId(
+          idReparacion
+        );
+
+      if (!reparacion) {
+        return res.status(404).json({
+          ok: false,
+          message:
+            "Reparación no encontrada",
+        });
+      }
+
+      const fotos =
+        await ReparacionModel.obtenerFotos(
+          idReparacion
+        );
+
+      return res.json({
+        ok: true,
+        total: fotos.length,
+        data: fotos,
+      });
+    } catch (error) {
+      console.error(
+        "Error obteniendo fotos de reparación:",
+        error
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message:
+          "No se pudieron obtener las fotos",
+      });
+    }
+  }
+
+  static async subirFoto(req, res) {
+    let imagenSubida = null;
+
+    try {
+      const idReparacion = Number(
+        req.params.id
+      );
+
+      const tipo = String(
+        req.body.tipo || ""
+      )
+        .trim()
+        .toUpperCase();
+
+      const descripcion =
+        req.body.descripcion?.trim() ||
+        null;
+
+      const visibleCliente =
+        convertirBooleano(
+          req.body.visibleCliente
+        );
+
+      if (!validarIdPositivo(idReparacion)) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La reparación no es válida",
+        });
+      }
+
+      if (
+        !TIPOS_FOTO_REPARACION.includes(
+          tipo
+        )
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "El tipo de foto no es válido",
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "Selecciona una imagen",
+        });
+      }
+
+      if (
+        descripcion &&
+        descripcion.length > 300
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La descripción no puede superar los 300 caracteres",
+        });
+      }
+
+      if (visibleCliente === null) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La visibilidad para el cliente no es válida",
+        });
+      }
+
+      const reparacion =
+        await ReparacionModel.obtenerPorId(
+          idReparacion
+        );
+
+      if (!reparacion) {
+        return res.status(404).json({
+          ok: false,
+          message:
+            "Reparación no encontrada",
+        });
+      }
+
+      imagenSubida =
+        await subirImagenCloudinary(
+          req.file.buffer,
+          idReparacion
+        );
+
+      const foto =
+        await ReparacionModel.crearFoto({
+          idReparacion,
+          idUsuario:
+            req.usuario.idUsuario,
+          tipo,
+          url: imagenSubida.secure_url,
+          publicId:
+            imagenSubida.public_id,
+          descripcion,
+          visibleCliente,
+        });
+
+      await registrarAuditoriaSegura({
+        req,
+        modulo: "REPARACIONES",
+        accion: "SUBIR_FOTO",
+        entidad: "REPARACION",
+        identidad: idReparacion,
+        descripcion:
+          `Se agregó una foto ${tipo.toLowerCase()} a la reparación`,
+        datosNuevos: {
+          idFoto: foto.IDFOTO,
+          tipo,
+          descripcion,
+          visibleCliente,
+        },
+      });
+
+      return res.status(201).json({
+        ok: true,
+        message:
+          "Foto subida correctamente",
+        data: foto,
+      });
+    } catch (error) {
+      if (imagenSubida?.public_id) {
+        try {
+          await cloudinary.uploader.destroy(
+            imagenSubida.public_id
+          );
+        } catch (errorCloudinary) {
+          console.error(
+            "No se pudo limpiar la imagen de Cloudinary:",
+            errorCloudinary
+          );
+        }
+      }
+
+      console.error(
+        "Error subiendo foto de reparación:",
+        error
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message:
+          "No se pudo subir la foto",
+      });
+    }
+  }
+
+  static async actualizarFoto(req, res) {
+    try {
+      const idReparacion = Number(
+        req.params.id
+      );
+
+      const idFoto = Number(
+        req.params.idFoto
+      );
+
+      if (
+        !validarIdPositivo(idReparacion) ||
+        !validarIdPositivo(idFoto)
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La reparación o la foto no son válidas",
+        });
+      }
+
+      const fotoAnterior =
+        await ReparacionModel.obtenerFotoPorId(
+          idReparacion,
+          idFoto
+        );
+
+      if (!fotoAnterior) {
+        return res.status(404).json({
+          ok: false,
+          message:
+            "Foto no encontrada",
+        });
+      }
+
+      const tipo = String(
+        req.body.tipo ??
+          fotoAnterior.TIPO
+      )
+        .trim()
+        .toUpperCase();
+
+      const descripcion =
+        req.body.descripcion === undefined
+          ? fotoAnterior.DESCRIPCION
+          : req.body.descripcion?.trim() ||
+            null;
+
+      const visibleCliente =
+        req.body.visibleCliente ===
+        undefined
+          ? Boolean(
+              fotoAnterior
+                .VISIBLE_CLIENTE
+            )
+          : convertirBooleano(
+              req.body.visibleCliente
+            );
+
+      if (
+        !TIPOS_FOTO_REPARACION.includes(
+          tipo
+        )
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "El tipo de foto no es válido",
+        });
+      }
+
+      if (
+        descripcion &&
+        descripcion.length > 300
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La descripción no puede superar los 300 caracteres",
+        });
+      }
+
+      if (visibleCliente === null) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La visibilidad para el cliente no es válida",
+        });
+      }
+
+      const actualizada =
+        await ReparacionModel.actualizarFoto(
+          idReparacion,
+          idFoto,
+          {
+            tipo,
+            descripcion,
+            visibleCliente,
+          }
+        );
+
+      if (!actualizada) {
+        return res.status(404).json({
+          ok: false,
+          message:
+            "Foto no encontrada",
+        });
+      }
+
+      await registrarAuditoriaSegura({
+        req,
+        modulo: "REPARACIONES",
+        accion: "ACTUALIZAR_FOTO",
+        entidad: "REPARACION",
+        identidad: idReparacion,
+        descripcion:
+          "Se actualizó una foto de la reparación",
+        datosAnteriores: {
+          idFoto,
+          tipo:
+            fotoAnterior.TIPO,
+          descripcion:
+            fotoAnterior.DESCRIPCION,
+          visibleCliente: Boolean(
+            fotoAnterior.VISIBLE_CLIENTE
+          ),
+        },
+        datosNuevos: {
+          idFoto,
+          tipo,
+          descripcion,
+          visibleCliente,
+        },
+      });
+
+      return res.json({
+        ok: true,
+        message:
+          "Foto actualizada correctamente",
+      });
+    } catch (error) {
+      console.error(
+        "Error actualizando foto de reparación:",
+        error
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message:
+          "No se pudo actualizar la foto",
+      });
+    }
+  }
+
+  static async eliminarFoto(req, res) {
+    try {
+      const idReparacion = Number(
+        req.params.id
+      );
+
+      const idFoto = Number(
+        req.params.idFoto
+      );
+
+      if (
+        !validarIdPositivo(idReparacion) ||
+        !validarIdPositivo(idFoto)
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "La reparación o la foto no son válidas",
+        });
+      }
+
+      const foto =
+        await ReparacionModel.obtenerFotoPorId(
+          idReparacion,
+          idFoto
+        );
+
+      if (!foto) {
+        return res.status(404).json({
+          ok: false,
+          message:
+            "Foto no encontrada",
+        });
+      }
+
+      const eliminada =
+        await ReparacionModel.eliminarFoto(
+          idReparacion,
+          idFoto
+        );
+
+      if (!eliminada) {
+        return res.status(404).json({
+          ok: false,
+          message:
+            "Foto no encontrada",
+        });
+      }
+
+      try {
+        await cloudinary.uploader.destroy(
+          foto.PUBLIC_ID
+        );
+      } catch (errorCloudinary) {
+        console.error(
+          "No se pudo eliminar la imagen de Cloudinary:",
+          errorCloudinary
+        );
+      }
+
+      await registrarAuditoriaSegura({
+        req,
+        modulo: "REPARACIONES",
+        accion: "ELIMINAR_FOTO",
+        entidad: "REPARACION",
+        identidad: idReparacion,
+        descripcion:
+          "Se eliminó una foto de la reparación",
+        datosAnteriores: {
+          idFoto,
+          tipo: foto.TIPO,
+          descripcion:
+            foto.DESCRIPCION,
+          visibleCliente: Boolean(
+            foto.VISIBLE_CLIENTE
+          ),
+        },
+      });
+
+      return res.json({
+        ok: true,
+        message:
+          "Foto eliminada correctamente",
+      });
+    } catch (error) {
+      console.error(
+        "Error eliminando foto de reparación:",
+        error
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message:
+          "No se pudo eliminar la foto",
       });
     }
   }

@@ -1271,6 +1271,266 @@ static async agregarRepuesto(
     return result.recordset;
   }
 
+
+  static async obtenerFotos(idReparacion) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input(
+        "idReparacion",
+        sql.Int,
+        idReparacion
+      )
+      .query(`
+        SELECT
+          rf.IDFOTO,
+          rf.IDREPARACION,
+          rf.IDUSUARIO,
+          rf.TIPO,
+          rf.URL,
+          rf.PUBLIC_ID,
+          rf.DESCRIPCION,
+          rf.VISIBLE_CLIENTE,
+          rf.FECHA_REGISTRO,
+          u.NOMBRE AS USUARIO
+        FROM REPARACION_FOTO rf
+        LEFT JOIN USUARIO u
+          ON rf.IDUSUARIO = u.IDUSUARIO
+        WHERE
+          rf.IDREPARACION = @idReparacion
+          AND rf.ESTADO = 1
+        ORDER BY
+          CASE rf.TIPO
+            WHEN 'ANTES' THEN 1
+            WHEN 'DIAGNOSTICO' THEN 2
+            WHEN 'DESPUES' THEN 3
+            ELSE 4
+          END,
+          rf.FECHA_REGISTRO DESC,
+          rf.IDFOTO DESC
+      `);
+
+    return result.recordset;
+  }
+
+  static async obtenerFotosPublicas(
+    idReparacion
+  ) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input(
+        "idReparacion",
+        sql.Int,
+        idReparacion
+      )
+      .query(`
+        SELECT
+          IDFOTO,
+          TIPO,
+          URL,
+          DESCRIPCION,
+          FECHA_REGISTRO
+        FROM REPARACION_FOTO
+        WHERE
+          IDREPARACION = @idReparacion
+          AND VISIBLE_CLIENTE = 1
+          AND ESTADO = 1
+        ORDER BY
+          CASE TIPO
+            WHEN 'ANTES' THEN 1
+            WHEN 'DIAGNOSTICO' THEN 2
+            WHEN 'DESPUES' THEN 3
+            ELSE 4
+          END,
+          FECHA_REGISTRO ASC,
+          IDFOTO ASC
+      `);
+
+    return result.recordset;
+  }
+
+  static async obtenerFotoPorId(
+    idReparacion,
+    idFoto
+  ) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input(
+        "idReparacion",
+        sql.Int,
+        idReparacion
+      )
+      .input("idFoto", sql.Int, idFoto)
+      .query(`
+        SELECT
+          IDFOTO,
+          IDREPARACION,
+          IDUSUARIO,
+          TIPO,
+          URL,
+          PUBLIC_ID,
+          DESCRIPCION,
+          VISIBLE_CLIENTE,
+          FECHA_REGISTRO
+        FROM REPARACION_FOTO
+        WHERE
+          IDFOTO = @idFoto
+          AND IDREPARACION = @idReparacion
+          AND ESTADO = 1
+      `);
+
+    return result.recordset[0] || null;
+  }
+
+  static async crearFoto(datos) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input(
+        "idReparacion",
+        sql.Int,
+        datos.idReparacion
+      )
+      .input(
+        "idUsuario",
+        sql.Int,
+        datos.idUsuario || null
+      )
+      .input(
+        "tipo",
+        sql.VarChar(20),
+        datos.tipo
+      )
+      .input(
+        "url",
+        sql.VarChar(1000),
+        datos.url
+      )
+      .input(
+        "publicId",
+        sql.VarChar(300),
+        datos.publicId
+      )
+      .input(
+        "descripcion",
+        sql.VarChar(300),
+        datos.descripcion || null
+      )
+      .input(
+        "visibleCliente",
+        sql.Bit,
+        datos.visibleCliente
+      )
+      .query(`
+        INSERT INTO REPARACION_FOTO (
+          IDREPARACION,
+          IDUSUARIO,
+          TIPO,
+          URL,
+          PUBLIC_ID,
+          DESCRIPCION,
+          VISIBLE_CLIENTE
+        )
+        OUTPUT
+          INSERTED.IDFOTO,
+          INSERTED.IDREPARACION,
+          INSERTED.IDUSUARIO,
+          INSERTED.TIPO,
+          INSERTED.URL,
+          INSERTED.DESCRIPCION,
+          INSERTED.VISIBLE_CLIENTE,
+          INSERTED.FECHA_REGISTRO
+        VALUES (
+          @idReparacion,
+          @idUsuario,
+          @tipo,
+          @url,
+          @publicId,
+          @descripcion,
+          @visibleCliente
+        )
+      `);
+
+    return result.recordset[0];
+  }
+
+  static async actualizarFoto(
+    idReparacion,
+    idFoto,
+    datos
+  ) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input(
+        "idReparacion",
+        sql.Int,
+        idReparacion
+      )
+      .input("idFoto", sql.Int, idFoto)
+      .input(
+        "tipo",
+        sql.VarChar(20),
+        datos.tipo
+      )
+      .input(
+        "descripcion",
+        sql.VarChar(300),
+        datos.descripcion || null
+      )
+      .input(
+        "visibleCliente",
+        sql.Bit,
+        datos.visibleCliente
+      )
+      .query(`
+        UPDATE REPARACION_FOTO
+        SET
+          TIPO = @tipo,
+          DESCRIPCION = @descripcion,
+          VISIBLE_CLIENTE = @visibleCliente
+        WHERE
+          IDFOTO = @idFoto
+          AND IDREPARACION = @idReparacion
+          AND ESTADO = 1
+      `);
+
+    return result.rowsAffected[0] > 0;
+  }
+
+  static async eliminarFoto(
+    idReparacion,
+    idFoto
+  ) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input(
+        "idReparacion",
+        sql.Int,
+        idReparacion
+      )
+      .input("idFoto", sql.Int, idFoto)
+      .query(`
+        UPDATE REPARACION_FOTO
+        SET ESTADO = 0
+        WHERE
+          IDFOTO = @idFoto
+          AND IDREPARACION = @idReparacion
+          AND ESTADO = 1
+      `);
+
+    return result.rowsAffected[0] > 0;
+  }
+
   static async obtenerEstados() {
     const pool = await getConnection();
 
