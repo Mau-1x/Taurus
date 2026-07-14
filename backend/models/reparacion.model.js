@@ -91,40 +91,217 @@ class ReparacionModel {
     return result.recordset[0] || null;
   }
 
-  static async obtenerPorCodigo(codigo) {
+  static async obtenerSeguimientosPorDni(dni) {
     const pool = await getConnection();
 
     const result = await pool
       .request()
-      .input("codigo", sql.VarChar(30), codigo)
+      .input(
+        "dni",
+        sql.VarChar(8),
+        dni
+      )
       .query(`
         SELECT
           r.IDREPARACION,
           r.CODIGO,
           r.FALLA_REPORTADA,
           r.DIAGNOSTICO,
+          r.SOLUCION,
+          r.COSTO_ESTIMADO,
+          r.COSTO_FINAL,
           r.FECHA_INGRESO,
           r.FECHA_ESTIMADA,
           r.FECHA_ENTREGA,
           r.GARANTIA_DIAS,
           er.NOMBRE AS ESTADO_REPARACION,
-          er.ORDEN,
+          er.ORDEN AS ORDEN_ESTADO,
+
+          (
+            SELECT MAX(ORDEN)
+            FROM ESTADO_REPARACION
+            WHERE ESTADO = 1
+          ) AS TOTAL_ESTADOS,
+
           ma.NOMBRE AS MARCA,
-          mo.NOMBRE AS MODELO
+          mo.NOMBRE AS MODELO,
+
+          CAST(
+            COALESCE(
+              r.COSTO_FINAL,
+              r.COSTO_ESTIMADO,
+              0
+            )
+            AS DECIMAL(10, 2)
+          ) AS TOTAL_REPARACION,
+
+          CAST(
+            COALESCE(
+              pagos.TOTAL_PAGADO,
+              0
+            )
+            AS DECIMAL(10, 2)
+          ) AS TOTAL_PAGADO,
+
+          CAST(
+            CASE
+              WHEN
+                COALESCE(
+                  pagos.TOTAL_PAGADO,
+                  0
+                ) >=
+                COALESCE(
+                  r.COSTO_FINAL,
+                  r.COSTO_ESTIMADO,
+                  0
+                )
+                THEN 0
+              ELSE
+                COALESCE(
+                  r.COSTO_FINAL,
+                  r.COSTO_ESTIMADO,
+                  0
+                )
+                -
+                COALESCE(
+                  pagos.TOTAL_PAGADO,
+                  0
+                )
+            END
+            AS DECIMAL(10, 2)
+          ) AS SALDO_PENDIENTE,
+
+          CASE
+            WHEN
+              COALESCE(
+                r.COSTO_FINAL,
+                r.COSTO_ESTIMADO,
+                0
+              ) <= 0
+              THEN 'SIN COSTO'
+
+            WHEN
+              COALESCE(
+                pagos.TOTAL_PAGADO,
+                0
+              ) = 0
+              THEN 'PENDIENTE'
+
+            WHEN
+              COALESCE(
+                pagos.TOTAL_PAGADO,
+                0
+              ) <
+              COALESCE(
+                r.COSTO_FINAL,
+                r.COSTO_ESTIMADO,
+                0
+              )
+              THEN 'PARCIAL'
+
+            ELSE 'PAGADO'
+          END AS ESTADO_PAGO
+
         FROM REPARACION r
+
         INNER JOIN ESTADO_REPARACION er
           ON r.IDESTADO = er.IDESTADO
+
         INNER JOIN EQUIPO e
           ON r.IDEQUIPO = e.IDEQUIPO
+
         INNER JOIN MODELO mo
           ON e.IDMODELO = mo.IDMODELO
+
         INNER JOIN MARCA ma
           ON mo.IDMARCA = ma.IDMARCA
-        WHERE r.CODIGO = @codigo
+
+        INNER JOIN CLIENTE c
+          ON e.IDCLIENTE = c.IDCLIENTE
+
+        INNER JOIN PERSONA p
+          ON c.IDPERSONA = p.IDPERSONA
+
+        OUTER APPLY (
+          SELECT
+            SUM(pr.MONTO) AS TOTAL_PAGADO
+          FROM PAGO_REPARACION pr
+          WHERE
+            pr.IDREPARACION =
+              r.IDREPARACION
+            AND pr.ESTADO = 1
+        ) pagos
+
+        WHERE
+          p.DNI = @dni
           AND r.ESTADO = 1
+
+        ORDER BY
+          r.FECHA_INGRESO DESC,
+          r.IDREPARACION DESC
       `);
 
-    return result.recordset[0] || null;
+    return result.recordset;
+  }
+
+  static async obtenerHistorialPublico(
+    idReparacion
+  ) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input(
+        "idReparacion",
+        sql.Int,
+        idReparacion
+      )
+      .query(`
+        SELECT
+          h.IDESTADO,
+          er.NOMBRE AS ESTADO,
+          er.ORDEN,
+          h.FECHA
+        FROM HISTORIAL_REPARACION h
+        INNER JOIN ESTADO_REPARACION er
+          ON h.IDESTADO = er.IDESTADO
+        WHERE
+          h.IDREPARACION = @idReparacion
+        ORDER BY h.FECHA ASC
+      `);
+
+    return result.recordset;
+  }
+
+  static async obtenerRepuestosPublicos(
+    idReparacion
+  ) {
+    const pool = await getConnection();
+
+    const result = await pool
+      .request()
+      .input(
+        "idReparacion",
+        sql.Int,
+        idReparacion
+      )
+      .query(`
+        SELECT
+          p.NOMBRE AS PRODUCTO,
+          drp.CANTIDAD
+        FROM DETALLE_REPARACION_PRODUCTO drp
+        INNER JOIN PRODUCTO p
+          ON drp.IDPRODUCTO =
+            p.IDPRODUCTO
+        WHERE
+          drp.IDREPARACION =
+            @idReparacion
+          AND drp.ESTADO = 1
+        ORDER BY
+          drp.FECHA_REGISTRO ASC
+      `);
+
+    return result.recordset;
   }
 
   static async obtenerEstadoPorId(idEstado) {

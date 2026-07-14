@@ -11,16 +11,24 @@ const {
 
 const router = express.Router();
 
-// Ruta pública
-router.get(
-  "/codigo/:codigo",
-  ReparacionController.obtenerPorCodigo
+/*
+ * Ruta pública:
+ * consulta por DNI usando POST para no colocarlo en la URL.
+ */
+router.post(
+  "/seguimiento",
+  ReparacionController.consultarSeguimiento
 );
 
-// Desde aquí todo requiere autenticación y rol
+/*
+ * Desde aquí todo requiere autenticación.
+ */
 router.use(
   verificarToken,
-  permitirRoles("ADMINISTRADOR", "TECNICO")
+  permitirRoles(
+    "ADMINISTRADOR",
+    "TECNICO"
+  )
 );
 
 router.get(

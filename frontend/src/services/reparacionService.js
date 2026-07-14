@@ -1,17 +1,46 @@
 const API_URL = `${
-  import.meta.env.VITE_API_URL || "http://localhost:3000"
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:3000"
 }/api/reparaciones`;
 
-export async function buscarReparacionPorCodigo(codigo) {
-  const respuesta = await fetch(
-    `${API_URL}/codigo/${encodeURIComponent(codigo)}`
-  );
+export async function buscarReparacionesPorDni(
+  dni
+) {
+  let respuesta;
 
-  const resultado = await respuesta.json();
+  try {
+    respuesta = await fetch(
+      `${API_URL}/seguimiento`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dni,
+        }),
+      }
+    );
+  } catch {
+    throw new Error(
+      "No se pudo conectar con el servidor. Inténtalo nuevamente."
+    );
+  }
+
+  let resultado;
+
+  try {
+    resultado = await respuesta.json();
+  } catch {
+    throw new Error(
+      "El servidor devolvió una respuesta no válida."
+    );
+  }
 
   if (!respuesta.ok) {
     throw new Error(
-      resultado.message || "No se pudo consultar la reparación"
+      resultado.message ||
+        "No se pudo consultar la reparación."
     );
   }
 
