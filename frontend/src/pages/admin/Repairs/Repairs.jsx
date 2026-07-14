@@ -13,6 +13,8 @@ import {
   Wallet,
   CircleDollarSign,
   FileDown,
+  MessageCircle,
+  Send,
 } from "lucide-react";
 
 import { obtenerProductos } from "../../../services/productoService";
@@ -114,6 +116,34 @@ function Repairs() {
 
   const [descargandoPdf, setDescargandoPdf] =
     useState(null);
+
+  const [modalWhatsApp, setModalWhatsApp] =
+    useState(false);
+
+  const [
+    reparacionWhatsApp,
+    setReparacionWhatsApp,
+  ] = useState(null);
+
+  const [
+    tipoMensajeWhatsApp,
+    setTipoMensajeWhatsApp,
+  ] = useState("RECIBIDO");
+
+  const [
+    resumenWhatsApp,
+    setResumenWhatsApp,
+  ] = useState(null);
+
+  const [
+    cargandoWhatsApp,
+    setCargandoWhatsApp,
+  ] = useState(false);
+
+  const [
+    errorWhatsApp,
+    setErrorWhatsApp,
+  ] = useState("");
 
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -646,6 +676,72 @@ async function guardarPago(evento) {
     }
   }
 
+  async function abrirWhatsApp(reparacion) {
+    const numero = normalizarNumeroWhatsApp(
+      reparacion.CELULAR
+    );
+
+    if (!numero) {
+      setError(
+        "El cliente no tiene un número de celular válido registrado."
+      );
+      return;
+    }
+
+    setReparacionWhatsApp(reparacion);
+    setTipoMensajeWhatsApp("RECIBIDO");
+    setResumenWhatsApp(null);
+    setErrorWhatsApp("");
+    setModalWhatsApp(true);
+    setCargandoWhatsApp(true);
+
+    try {
+      const datos = await obtenerPagosReparacion(
+        reparacion.IDREPARACION
+      );
+
+      setResumenWhatsApp(datos.resumen || null);
+    } catch {
+      setResumenWhatsApp(null);
+    } finally {
+      setCargandoWhatsApp(false);
+    }
+  }
+
+  function enviarWhatsApp() {
+    if (!reparacionWhatsApp) return;
+
+    const numero = normalizarNumeroWhatsApp(
+      reparacionWhatsApp.CELULAR
+    );
+
+    if (!numero) {
+      setErrorWhatsApp(
+        "El número del cliente no es válido."
+      );
+      return;
+    }
+
+    const mensaje = crearMensajeWhatsApp(
+      reparacionWhatsApp,
+      tipoMensajeWhatsApp,
+      resumenWhatsApp
+    );
+
+    const enlace =
+      `https://wa.me/${numero}?text=${encodeURIComponent(
+        mensaje
+      )}`;
+
+    window.open(
+      enlace,
+      "_blank",
+      "noopener,noreferrer"
+    );
+
+    setModalWhatsApp(false);
+  }
+
   return (
     <section>
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -672,7 +768,12 @@ async function guardarPago(evento) {
         </button>
       </div>
 
-      {error && !modalAbierto && !modalEstado && (
+      {error &&
+        !modalAbierto &&
+        !modalEstado &&
+        !modalRepuestos &&
+        !modalPagos &&
+        !modalWhatsApp && (
         <div className="mt-6 rounded-xl bg-red-50 p-4 text-red-700">
           {error}
         </div>
@@ -783,6 +884,16 @@ async function guardarPago(evento) {
 
                     <td className="py-4">
                       <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() =>
+                            abrirWhatsApp(reparacion)
+                          }
+                          title="Enviar aviso por WhatsApp"
+                          className="rounded-lg bg-green-50 p-2 text-green-700 hover:bg-green-100"
+                        >
+                          <MessageCircle size={18} />
+                        </button>
+
                         <button
                           onClick={() => descargarPdf(reparacion)}
                           disabled={
@@ -929,7 +1040,176 @@ async function guardarPago(evento) {
           }}
         />
       )}
+
+      {modalWhatsApp && (
+        <ModalWhatsApp
+          reparacion={reparacionWhatsApp}
+          tipo={tipoMensajeWhatsApp}
+          setTipo={setTipoMensajeWhatsApp}
+          resumen={resumenWhatsApp}
+          cargando={cargandoWhatsApp}
+          error={errorWhatsApp}
+          enviar={enviarWhatsApp}
+          cerrar={() => {
+            setModalWhatsApp(false);
+            setReparacionWhatsApp(null);
+            setResumenWhatsApp(null);
+            setErrorWhatsApp("");
+          }}
+        />
+      )}
     </section>
+  );
+}
+
+function ModalWhatsApp({
+  reparacion,
+  tipo,
+  setTipo,
+  resumen,
+  cargando,
+  error,
+  enviar,
+  cerrar,
+}) {
+  const mensaje = crearMensajeWhatsApp(
+    reparacion,
+    tipo,
+    resumen
+  );
+
+  const opciones = [
+    {
+      valor: "RECIBIDO",
+      nombre: "Equipo recibido",
+    },
+    {
+      valor: "DIAGNOSTICO",
+      nombre: "Diagnóstico terminado",
+    },
+    {
+      valor: "PRESUPUESTO",
+      nombre: "Presupuesto listo",
+    },
+    {
+      valor: "FINALIZADO",
+      nombre: "Reparación finalizada",
+    },
+    {
+      valor: "LISTO",
+      nombre: "Listo para recoger",
+    },
+    {
+      valor: "SALDO",
+      nombre: "Recordatorio de saldo",
+    },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 p-4">
+      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white">
+        <div className="flex items-center justify-between border-b px-7 py-5">
+          <div>
+            <div className="flex items-center gap-2">
+              <MessageCircle
+                size={23}
+                className="text-green-700"
+              />
+
+              <h2 className="text-2xl font-bold">
+                Enviar aviso por WhatsApp
+              </h2>
+            </div>
+
+            <p className="mt-2 text-sm text-gray-500">
+              {reparacion?.CLIENTE} —{" "}
+              {reparacion?.CELULAR}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={cerrar}
+            className="rounded-lg p-2 hover:bg-gray-100"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="p-7">
+          <label>
+            <span className="mb-2 block text-sm font-semibold">
+              Tipo de mensaje
+            </span>
+
+            <select
+              value={tipo}
+              onChange={(evento) =>
+                setTipo(evento.target.value)
+              }
+              className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-green-600"
+            >
+              {opciones.map((opcion) => (
+                <option
+                  key={opcion.valor}
+                  value={opcion.valor}
+                >
+                  {opcion.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="mt-5">
+            <p className="mb-2 text-sm font-semibold">
+              Vista previa
+            </p>
+
+            <div className="whitespace-pre-line rounded-2xl border border-green-200 bg-green-50 p-5 leading-relaxed text-gray-800">
+              {cargando && tipo === "SALDO"
+                ? "Consultando saldo..."
+                : mensaje}
+            </div>
+          </div>
+
+          {tipo === "SALDO" &&
+            !cargando &&
+            !resumen && (
+              <div className="mt-4 rounded-xl bg-amber-50 p-4 text-amber-800">
+                No se pudo consultar el saldo. El
+                mensaje se enviará sin un monto
+                específico.
+              </div>
+            )}
+
+          {error && (
+            <div className="mt-4 rounded-xl bg-red-50 p-4 text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={cerrar}
+              className="rounded-xl border border-gray-300 px-5 py-3 font-semibold text-gray-700"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              onClick={enviar}
+              disabled={cargando && tipo === "SALDO"}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-700 px-6 py-3 font-semibold text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Send size={19} />
+              Abrir WhatsApp
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1835,6 +2115,122 @@ function Area({
       </p>
     </label>
   );
+}
+
+function normalizarNumeroWhatsApp(celular) {
+  let numero = String(celular || "").replace(
+    /\D/g,
+    ""
+  );
+
+  if (numero.startsWith("0051")) {
+    numero = numero.slice(2);
+  }
+
+  if (numero.startsWith("51") && numero.length === 11) {
+    return numero;
+  }
+
+  if (numero.length === 9) {
+    return `51${numero}`;
+  }
+
+  return "";
+}
+
+function obtenerPrimerNombre(nombreCompleto) {
+  return (
+    String(nombreCompleto || "cliente")
+      .trim()
+      .split(/\s+/)[0] || "cliente"
+  );
+}
+
+function crearMensajeWhatsApp(
+  reparacion,
+  tipo,
+  resumen
+) {
+  if (!reparacion) return "";
+
+  const cliente = obtenerPrimerNombre(
+    reparacion.CLIENTE
+  );
+
+  const equipo = `${reparacion.MARCA || ""} ${
+    reparacion.MODELO || ""
+  }`.trim();
+
+  const codigo = reparacion.CODIGO || "Sin código";
+
+  const costo = Number(
+    reparacion.COSTO_FINAL ??
+      reparacion.COSTO_ESTIMADO ??
+      0
+  );
+
+  const saldo = Number(
+    resumen?.SALDO_PENDIENTE || 0
+  );
+
+  const seguimiento =
+    `${window.location.origin}/seguimiento`;
+
+  const encabezado =
+    `Hola ${cliente}, te escribimos de Taurus Servicio Técnico.`;
+
+  const mensajes = {
+    RECIBIDO:
+      `${encabezado}\n\n` +
+      `Tu equipo ${equipo} fue recibido correctamente.\n` +
+      `Código de reparación: ${codigo}.\n\n` +
+      `Puedes revisar el avance con tu DNI aquí:\n${seguimiento}`,
+
+    DIAGNOSTICO:
+      `${encabezado}\n\n` +
+      `El diagnóstico de tu equipo ${equipo} ya está listo.\n` +
+      `Diagnóstico: ${
+        reparacion.DIAGNOSTICO ||
+        "Comunícate con nosotros para conocer el detalle."
+      }\n\n` +
+      `Código: ${codigo}.`,
+
+    PRESUPUESTO:
+      `${encabezado}\n\n` +
+      `El presupuesto para tu equipo ${equipo} ya está listo.\n` +
+      `${
+        costo > 0
+          ? `Monto: S/ ${costo.toFixed(2)}.`
+          : "Comunícate con nosotros para confirmar el monto."
+      }\n\n` +
+      `Código: ${codigo}.`,
+
+    FINALIZADO:
+      `${encabezado}\n\n` +
+      `La reparación de tu equipo ${equipo} ha sido finalizada.\n` +
+      `Código: ${codigo}.\n\n` +
+      `Puedes consultar los detalles con tu DNI en:\n${seguimiento}`,
+
+    LISTO:
+      `${encabezado}\n\n` +
+      `Tu equipo ${equipo} ya está listo para recoger.\n` +
+      `Código: ${codigo}.\n` +
+      `Horario de atención: 10:00 a. m. a 9:00 p. m.`,
+
+    SALDO:
+      `${encabezado}\n\n` +
+      `Te recordamos que tu reparación ${codigo} tiene ` +
+      `${
+        resumen
+          ? `un saldo pendiente de S/ ${saldo.toFixed(
+              2
+            )}.`
+          : "un saldo pendiente."
+      }\n\n` +
+      `Gracias por confiar en Taurus.`,
+  };
+
+  return mensajes[tipo] || mensajes.RECIBIDO;
 }
 
 function formatearFecha(fecha) {

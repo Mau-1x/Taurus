@@ -27,6 +27,7 @@ class ReparacionModel {
         e.IMEI,
         c.IDCLIENTE,
         p.DNI,
+        p.CELULAR,
         CONCAT(
           p.NOMBRES, ' ',
           p.APELLIDO_PATERNO, ' ',
@@ -66,6 +67,7 @@ class ReparacionModel {
           mo.NOMBRE AS MODELO,
           e.IMEI,
           p.DNI,
+          p.CELULAR,
           CONCAT(
             p.NOMBRES, ' ',
             p.APELLIDO_PATERNO, ' ',
