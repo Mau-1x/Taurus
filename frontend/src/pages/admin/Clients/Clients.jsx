@@ -7,6 +7,15 @@ import {
   X,
   LoaderCircle,
   Users,
+  History,
+  Smartphone,
+  Wrench,
+  Wallet,
+  Images,
+  CircleDollarSign,
+  CalendarDays,
+  ExternalLink,
+  AlertCircle,
 } from "lucide-react";
 
 import {
@@ -14,6 +23,7 @@ import {
   crearCliente,
   actualizarCliente,
   eliminarCliente,
+  obtenerHistorialCliente,
 } from "../../../services/clienteService";
 
 const formularioInicial = {
@@ -36,6 +46,21 @@ function Clients() {
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
+
+  const [modalHistorial, setModalHistorial] =
+    useState(false);
+
+  const [clienteHistorial, setClienteHistorial] =
+    useState(null);
+
+  const [historial, setHistorial] =
+    useState(null);
+
+  const [cargandoHistorial, setCargandoHistorial] =
+    useState(false);
+
+  const [errorHistorial, setErrorHistorial] =
+    useState("");
 
   useEffect(() => {
     cargarClientes();
@@ -82,6 +107,29 @@ function Clients() {
     setError("");
     setMensaje("");
     setModalAbierto(true);
+  }
+
+  async function abrirHistorialCliente(cliente) {
+    try {
+      setClienteHistorial(cliente);
+      setHistorial(null);
+      setErrorHistorial("");
+      setCargandoHistorial(true);
+      setModalHistorial(true);
+
+      const datos = await obtenerHistorialCliente(
+        cliente.IDCLIENTE
+      );
+
+      setHistorial(datos);
+    } catch (errorCarga) {
+      setErrorHistorial(
+        errorCarga.message ||
+          "No se pudo cargar el historial"
+      );
+    } finally {
+      setCargandoHistorial(false);
+    }
   }
 
   function abrirEditarCliente(cliente) {
@@ -270,7 +318,9 @@ function Clients() {
         </button>
       </div>
 
-      {error && !modalAbierto && (
+      {error &&
+        !modalAbierto &&
+        !modalHistorial && (
         <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
           {error}
         </div>
@@ -357,6 +407,16 @@ function Clients() {
                     <td className="py-4">
                       <div className="flex justify-end gap-2">
                         <button
+                          onClick={() =>
+                            abrirHistorialCliente(cliente)
+                          }
+                          title="Ver historial completo"
+                          className="rounded-lg bg-violet-50 p-2 text-violet-700 transition hover:bg-violet-100"
+                        >
+                          <History size={18} />
+                        </button>
+
+                        <button
                           onClick={() => abrirEditarCliente(cliente)}
                           title="Editar"
                           className="rounded-lg bg-blue-50 p-2 text-blue-700 transition hover:bg-blue-100"
@@ -404,7 +464,483 @@ function Clients() {
           cerrar={() => setModalAbierto(false)}
         />
       )}
+
+      {modalHistorial && (
+        <ModalHistorialCliente
+          cliente={clienteHistorial}
+          datos={historial}
+          cargando={cargandoHistorial}
+          error={errorHistorial}
+          cerrar={() => {
+            setModalHistorial(false);
+            setClienteHistorial(null);
+            setHistorial(null);
+            setErrorHistorial("");
+          }}
+        />
+      )}
     </section>
+  );
+}
+
+function ModalHistorialCliente({
+  cliente,
+  datos,
+  cargando,
+  error,
+  cerrar,
+}) {
+  const resumen = datos?.resumen || {};
+  const equipos = datos?.equipos || [];
+  const reparaciones =
+    datos?.reparaciones || [];
+  const pagos = datos?.pagos || [];
+  const fotos = datos?.fotos || [];
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/65 p-4">
+      <div className="max-h-[94vh] w-full max-w-7xl overflow-y-auto rounded-3xl bg-gray-50 shadow-2xl">
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b bg-white px-6 py-5 sm:px-8">
+          <div>
+            <div className="flex items-center gap-2">
+              <History
+                size={24}
+                className="text-violet-700"
+              />
+
+              <h2 className="text-2xl font-black text-gray-950">
+                Historial del cliente
+              </h2>
+            </div>
+
+            <p className="mt-2 text-sm text-gray-500">
+              {cliente?.NOMBRES}{" "}
+              {cliente?.APELLIDO_PATERNO}{" "}
+              {cliente?.APELLIDO_MATERNO || ""}
+              {" · "}
+              DNI {cliente?.DNI || "Sin DNI"}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={cerrar}
+            className="rounded-xl p-2 text-gray-500 transition hover:bg-gray-100"
+          >
+            <X size={25} />
+          </button>
+        </header>
+
+        {cargando ? (
+          <div className="flex min-h-[420px] items-center justify-center">
+            <LoaderCircle
+              size={42}
+              className="animate-spin text-violet-700"
+            />
+          </div>
+        ) : error ? (
+          <div className="p-8">
+            <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">
+              <AlertCircle
+                size={22}
+                className="mt-0.5 shrink-0"
+              />
+
+              <p>{error}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-7 p-6 sm:p-8">
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              <TarjetaHistorial
+                titulo="Equipos"
+                valor={resumen.EQUIPOS || 0}
+                icono={Smartphone}
+                clase="bg-blue-100 text-blue-700"
+              />
+
+              <TarjetaHistorial
+                titulo="Reparaciones"
+                valor={resumen.REPARACIONES || 0}
+                icono={Wrench}
+                clase="bg-amber-100 text-amber-700"
+              />
+
+              <TarjetaHistorial
+                titulo="Reparaciones activas"
+                valor={
+                  resumen.REPARACIONES_ACTIVAS ||
+                  0
+                }
+                icono={CalendarDays}
+                clase="bg-orange-100 text-orange-700"
+              />
+
+              <TarjetaHistorial
+                titulo="Total pagado"
+                valor={formatearMoneda(
+                  resumen.TOTAL_PAGADO
+                )}
+                icono={CircleDollarSign}
+                clase="bg-emerald-100 text-emerald-700"
+              />
+
+              <TarjetaHistorial
+                titulo="Saldo pendiente"
+                valor={formatearMoneda(
+                  resumen.SALDO_PENDIENTE
+                )}
+                icono={Wallet}
+                clase="bg-red-100 text-red-700"
+              />
+            </section>
+
+            <section className="rounded-2xl border border-gray-200 bg-white p-6">
+              <div className="flex items-center gap-2">
+                <Smartphone
+                  size={21}
+                  className="text-blue-700"
+                />
+
+                <h3 className="text-xl font-black text-gray-950">
+                  Equipos registrados
+                </h3>
+              </div>
+
+              {equipos.length === 0 ? (
+                <Vacio texto="El cliente no tiene equipos registrados." />
+              ) : (
+                <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {equipos.map((equipo) => (
+                    <article
+                      key={equipo.IDEQUIPO}
+                      className="rounded-2xl border border-gray-200 p-5"
+                    >
+                      <p className="text-lg font-black text-gray-950">
+                        {equipo.MARCA}{" "}
+                        {equipo.MODELO}
+                      </p>
+
+                      <div className="mt-4 space-y-2 text-sm text-gray-600">
+                        <p>
+                          <strong>Tipo:</strong>{" "}
+                          {equipo.TIPO_DISPOSITIVO ||
+                            "Sin registrar"}
+                        </p>
+
+                        <p>
+                          <strong>IMEI:</strong>{" "}
+                          {equipo.IMEI ||
+                            "Sin registrar"}
+                        </p>
+
+                        <p>
+                          <strong>Serie:</strong>{" "}
+                          {equipo.NUMERO_SERIE ||
+                            "Sin registrar"}
+                        </p>
+
+                        <p>
+                          <strong>Color:</strong>{" "}
+                          {equipo.COLOR ||
+                            "Sin registrar"}
+                        </p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-2xl border border-gray-200 bg-white p-6">
+              <div className="flex items-center gap-2">
+                <Wrench
+                  size={21}
+                  className="text-amber-700"
+                />
+
+                <h3 className="text-xl font-black text-gray-950">
+                  Reparaciones
+                </h3>
+              </div>
+
+              {reparaciones.length === 0 ? (
+                <Vacio texto="El cliente no tiene reparaciones registradas." />
+              ) : (
+                <div className="mt-5 overflow-x-auto">
+                  <table className="w-full min-w-[1000px]">
+                    <thead>
+                      <tr className="border-b text-left text-sm text-gray-500">
+                        <th className="pb-3">
+                          Código
+                        </th>
+                        <th className="pb-3">
+                          Equipo
+                        </th>
+                        <th className="pb-3">
+                          Estado
+                        </th>
+                        <th className="pb-3">
+                          Ingreso
+                        </th>
+                        <th className="pb-3">
+                          Total
+                        </th>
+                        <th className="pb-3">
+                          Pagado
+                        </th>
+                        <th className="pb-3">
+                          Saldo
+                        </th>
+                        <th className="pb-3">
+                          Fotos
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {reparaciones.map(
+                        (reparacion) => (
+                          <tr
+                            key={
+                              reparacion.IDREPARACION
+                            }
+                            className="border-b border-gray-100"
+                          >
+                            <td className="py-4 font-bold text-gray-950">
+                              {reparacion.CODIGO}
+                            </td>
+
+                            <td className="py-4">
+                              {reparacion.MARCA}{" "}
+                              {reparacion.MODELO}
+                            </td>
+
+                            <td className="py-4">
+                              <span
+                                className={`rounded-full px-3 py-1 text-xs font-bold ${obtenerClaseEstado(
+                                  reparacion.ESTADO_REPARACION
+                                )}`}
+                              >
+                                {
+                                  reparacion.ESTADO_REPARACION
+                                }
+                              </span>
+                            </td>
+
+                            <td className="py-4 text-gray-600">
+                              {formatearFechaHora(
+                                reparacion.FECHA_INGRESO
+                              )}
+                            </td>
+
+                            <td className="py-4 font-semibold">
+                              {formatearMoneda(
+                                reparacion.TOTAL_REPARACION
+                              )}
+                            </td>
+
+                            <td className="py-4 font-semibold text-emerald-700">
+                              {formatearMoneda(
+                                reparacion.TOTAL_PAGADO
+                              )}
+                            </td>
+
+                            <td className="py-4 font-semibold text-red-700">
+                              {formatearMoneda(
+                                reparacion.SALDO_PENDIENTE
+                              )}
+                            </td>
+
+                            <td className="py-4">
+                              {reparacion.FOTOS || 0}
+                            </td>
+                          </tr>
+                        )
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-2xl border border-gray-200 bg-white p-6">
+              <div className="flex items-center gap-2">
+                <Wallet
+                  size={21}
+                  className="text-emerald-700"
+                />
+
+                <h3 className="text-xl font-black text-gray-950">
+                  Historial de pagos
+                </h3>
+              </div>
+
+              {pagos.length === 0 ? (
+                <Vacio texto="El cliente no tiene pagos registrados." />
+              ) : (
+                <div className="mt-5 overflow-x-auto">
+                  <table className="w-full min-w-[760px]">
+                    <thead>
+                      <tr className="border-b text-left text-sm text-gray-500">
+                        <th className="pb-3">
+                          Reparación
+                        </th>
+                        <th className="pb-3">
+                          Monto
+                        </th>
+                        <th className="pb-3">
+                          Método
+                        </th>
+                        <th className="pb-3">
+                          Fecha
+                        </th>
+                        <th className="pb-3">
+                          Observación
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {pagos.map((pago) => (
+                        <tr
+                          key={pago.IDPAGO}
+                          className="border-b border-gray-100"
+                        >
+                          <td className="py-4 font-bold">
+                            {pago.CODIGO}
+                          </td>
+
+                          <td className="py-4 font-black text-emerald-700">
+                            {formatearMoneda(
+                              pago.MONTO
+                            )}
+                          </td>
+
+                          <td className="py-4">
+                            {pago.METODO_PAGO}
+                          </td>
+
+                          <td className="py-4 text-gray-600">
+                            {formatearFechaHora(
+                              pago.FECHA_PAGO
+                            )}
+                          </td>
+
+                          <td className="py-4">
+                            {pago.OBSERVACIONES ||
+                              "Sin observación"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-2xl border border-gray-200 bg-white p-6">
+              <div className="flex items-center gap-2">
+                <Images
+                  size={21}
+                  className="text-violet-700"
+                />
+
+                <h3 className="text-xl font-black text-gray-950">
+                  Fotos de reparaciones
+                </h3>
+              </div>
+
+              {fotos.length === 0 ? (
+                <Vacio texto="El cliente no tiene fotos de reparaciones." />
+              ) : (
+                <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {fotos.map((foto) => (
+                    <article
+                      key={foto.IDFOTO}
+                      className="overflow-hidden rounded-2xl border border-gray-200"
+                    >
+                      <a
+                        href={foto.URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group relative block aspect-square bg-gray-100"
+                      >
+                        <img
+                          src={foto.URL}
+                          alt={
+                            foto.DESCRIPCION ||
+                            foto.TIPO
+                          }
+                          className="h-full w-full object-cover"
+                        />
+
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/40">
+                          <ExternalLink
+                            size={26}
+                            className="text-white opacity-0 transition group-hover:opacity-100"
+                          />
+                        </div>
+                      </a>
+
+                      <div className="p-4">
+                        <div className="flex flex-wrap gap-2">
+                          <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">
+                            {foto.TIPO}
+                          </span>
+
+                          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                            {foto.CODIGO}
+                          </span>
+                        </div>
+
+                        <p className="mt-3 text-sm text-gray-600">
+                          {foto.DESCRIPCION ||
+                            "Sin descripción"}
+                        </p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TarjetaHistorial({
+  titulo,
+  valor,
+  icono: Icono,
+  clase,
+}) {
+  return (
+    <article className="rounded-2xl border border-gray-200 bg-white p-5">
+      <div
+        className={`inline-flex rounded-xl p-3 ${clase}`}
+      >
+        <Icono size={22} />
+      </div>
+
+      <p className="mt-4 text-sm font-semibold text-gray-500">
+        {titulo}
+      </p>
+
+      <p className="mt-1 text-2xl font-black text-gray-950">
+        {valor}
+      </p>
+    </article>
+  );
+}
+
+function Vacio({ texto }) {
+  return (
+    <div className="mt-5 rounded-xl bg-gray-50 py-10 text-center text-gray-500">
+      {texto}
+    </div>
   );
 }
 
@@ -600,6 +1136,58 @@ function Campo({
       )}
     </label>
   );
+}
+
+function formatearMoneda(valor) {
+  return new Intl.NumberFormat("es-PE", {
+    style: "currency",
+    currency: "PEN",
+    minimumFractionDigits: 2,
+  }).format(Number(valor || 0));
+}
+
+function formatearFechaHora(fecha) {
+  if (!fecha) return "Sin fecha";
+
+  const valor = new Date(fecha);
+
+  if (Number.isNaN(valor.getTime())) {
+    return "Sin fecha";
+  }
+
+  return new Intl.DateTimeFormat("es-PE", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(valor);
+}
+
+function obtenerClaseEstado(estado) {
+  const nombre = String(estado || "")
+    .trim()
+    .toUpperCase();
+
+  if (
+    nombre.includes("ENTREGADO") ||
+    nombre.includes("FINALIZADO")
+  ) {
+    return "bg-emerald-100 text-emerald-700";
+  }
+
+  if (
+    nombre.includes("NO REPARABLE") ||
+    nombre.includes("CANCELADO")
+  ) {
+    return "bg-red-100 text-red-700";
+  }
+
+  if (
+    nombre.includes("LISTO") ||
+    nombre.includes("REPARADO")
+  ) {
+    return "bg-blue-100 text-blue-700";
+  }
+
+  return "bg-amber-100 text-amber-700";
 }
 
 export default Clients;
