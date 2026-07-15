@@ -164,19 +164,6 @@ function Services() {
             {servicios.map((servicio) => {
               const Icono = servicio.icono;
 
-              <div className="mt-10 rounded-2xl border border-yellow-200 bg-yellow-50 p-5">
-                <p className="font-semibold text-yellow-900">
-                  Los tiempos y garantías son referenciales
-                </p>
-
-                <p className="mt-2 text-sm leading-6 text-yellow-800">
-                  El tiempo final, el costo y la garantía dependen del modelo,
-                  la disponibilidad del repuesto y el diagnóstico técnico.
-                  No realizamos ninguna reparación sin la aprobación previa
-                  del cliente.
-                </p>
-              </div>
-
               return (
                 <article
                   key={servicio.titulo}
@@ -253,6 +240,19 @@ function Services() {
               );
             })}
           </div>
+
+          <div className="mt-10 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+            <p className="font-semibold text-amber-950">
+              Los tiempos y garantías son referenciales
+            </p>
+
+            <p className="mt-2 text-sm leading-6 text-amber-900">
+              El tiempo final, el costo y la garantía dependen del modelo,
+              la disponibilidad del repuesto y el diagnóstico técnico.
+              No realizamos ninguna reparación sin la aprobación previa
+              del cliente.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -274,7 +274,7 @@ function Services() {
             <Caracteristica
               icono={Clock3}
               titulo="Seguimiento"
-              descripcion="Consulta desde la web el avance de tu reparación usando tu código."
+              descripcion="Consulta desde la web el avance de tu reparación usando tu DNI."
             />
           </div>
         </div>

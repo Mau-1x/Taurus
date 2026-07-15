@@ -22,11 +22,17 @@ import {
   ChevronDown,
   ShoppingBag,
   ImageOff,
+  Images,
+  ExternalLink,
 } from "lucide-react";
 
 import {
   obtenerProductos,
 } from "../../services/productoService";
+
+import {
+  obtenerGaleriaPublica,
+} from "../../services/galeriaService";
 
 const servicios = [
   {
@@ -74,7 +80,7 @@ const pasos = [
     numero: "03",
     titulo: "Seguimiento en línea",
     descripcion:
-      "Consulta el avance de la reparación usando tu código.",
+      "Consulta el avance de la reparación usando tu DNI.",
     icono: Clock3,
   },
   {
@@ -108,7 +114,7 @@ const preguntasFrecuentes = [
     pregunta:
       "¿Cómo consulto el estado de mi equipo?",
     respuesta:
-      "Al registrar la reparación recibirás un código. Puedes ingresarlo en la página de seguimiento para revisar el avance.",
+      "Ingresa tu DNI en la página de seguimiento para revisar tus reparaciones, estados, fotos autorizadas, pagos y garantía.",
   },
   {
     pregunta:
@@ -130,18 +136,29 @@ function Home() {
     setProductosDestacados,
   ] = useState([]);
 
+  const [
+    trabajosRealizados,
+    setTrabajosRealizados,
+  ] = useState([]);
+
   useEffect(() => {
-    async function cargarProductosDestacados() {
-      try {
-        const respuesta = await obtenerProductos();
+    async function cargarContenidoInicio() {
+      const [
+        resultadoProductos,
+        resultadoGaleria,
+      ] = await Promise.allSettled([
+        obtenerProductos(),
+        obtenerGaleriaPublica(8),
+      ]);
 
-        console.log(
-          "Productos recibidos en Inicio:",
-          respuesta
-        );
-
-        const productos = Array.isArray(respuesta)
-          ? respuesta
+      if (
+        resultadoProductos.status ===
+        "fulfilled"
+      ) {
+        const productos = Array.isArray(
+          resultadoProductos.value
+        )
+          ? resultadoProductos.value
           : [];
 
         const disponibles = productos
@@ -156,21 +173,22 @@ function Home() {
           )
           .slice(0, 4);
 
-        console.log(
-          "Productos destacados:",
-          disponibles
-        );
-
         setProductosDestacados(disponibles);
-      } catch (error) {
-        console.error(
-          "Error cargando productos en Inicio:",
-          error
+      }
+
+      if (
+        resultadoGaleria.status ===
+        "fulfilled"
+      ) {
+        setTrabajosRealizados(
+          Array.isArray(resultadoGaleria.value)
+            ? resultadoGaleria.value
+            : []
         );
       }
     }
 
-    cargarProductosDestacados();
+    cargarContenidoInicio();
   }, []);
 
   return (
@@ -266,7 +284,7 @@ function Home() {
                   to="/seguimiento"
                   className="mt-8 flex items-center justify-center gap-2 rounded-xl bg-black px-5 py-4 font-semibold text-white transition hover:bg-red-700"
                 >
-                  Consultar con mi código
+                  Consultar con mi DNI
                   <ArrowRight size={19} />
                 </Link>
               </div>
@@ -389,6 +407,75 @@ function Home() {
                   />
                 )
               )}
+            </div>
+          </div>
+        </section>
+      )}
+
+
+      {/* GALERÍA DE TRABAJOS */}
+      {trabajosRealizados.length > 0 && (
+        <section className="bg-gray-950 py-24 text-white">
+          <div className="mx-auto max-w-7xl px-6">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-widest text-red-500">
+                  Trabajos realizados
+                </p>
+
+                <h2 className="mt-3 max-w-3xl text-3xl font-bold md:text-4xl">
+                  Evidencias reales del servicio técnico
+                </h2>
+
+                <p className="mt-4 max-w-2xl leading-7 text-gray-300">
+                  Estas fotografías fueron autorizadas para mostrar el
+                  estado, diagnóstico o resultado de reparaciones realizadas.
+                </p>
+              </div>
+
+              <Link
+                to="/reservas"
+                className="inline-flex items-center gap-2 font-semibold text-red-400"
+              >
+                Reservar una revisión
+                <ArrowRight size={19} />
+              </Link>
+            </div>
+
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {trabajosRealizados.map((trabajo) => (
+                <TrabajoRealizado
+                  key={trabajo.IDFOTO}
+                  trabajo={trabajo}
+                />
+              ))}
+            </div>
+
+            <div className="mt-10 flex flex-col items-center justify-between gap-5 rounded-3xl border border-white/10 bg-white/5 p-7 text-center sm:flex-row sm:text-left">
+              <div className="flex items-start gap-4">
+                <div className="rounded-2xl bg-red-700 p-3">
+                  <Images size={25} />
+                </div>
+
+                <div>
+                  <p className="font-bold">
+                    Seguimiento con evidencias
+                  </p>
+
+                  <p className="mt-1 text-sm text-gray-300">
+                    Los clientes pueden consultar por DNI las fotos que Taurus
+                    autorice para su reparación.
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                to="/seguimiento"
+                className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-gray-950 transition hover:bg-gray-100"
+              >
+                Consultar reparación
+                <ArrowRight size={18} />
+              </Link>
             </div>
           </div>
         </section>
@@ -560,6 +647,66 @@ function Home() {
         </div>
       </section>
     </main>
+  );
+}
+
+
+function TrabajoRealizado({ trabajo }) {
+  const etiquetas = {
+    ANTES: "Antes",
+    DIAGNOSTICO: "Diagnóstico",
+    DESPUES: "Resultado",
+  };
+
+  const clases = {
+    ANTES: "bg-amber-100 text-amber-800",
+    DIAGNOSTICO: "bg-blue-100 text-blue-800",
+    DESPUES: "bg-emerald-100 text-emerald-800",
+  };
+
+  return (
+    <article className="group overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+      <a
+        href={trabajo.URL}
+        target="_blank"
+        rel="noreferrer"
+        className="relative block h-64 overflow-hidden bg-black"
+      >
+        <img
+          src={trabajo.URL}
+          alt={
+            trabajo.DESCRIPCION ||
+            `Trabajo en ${trabajo.MARCA} ${trabajo.MODELO}`
+          }
+          loading="lazy"
+          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+        />
+
+        <span
+          className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-bold ${
+            clases[trabajo.TIPO] ||
+            "bg-gray-100 text-gray-800"
+          }`}
+        >
+          {etiquetas[trabajo.TIPO] || trabajo.TIPO}
+        </span>
+
+        <span className="absolute right-4 top-4 rounded-full bg-black/70 p-2 text-white opacity-0 transition group-hover:opacity-100">
+          <ExternalLink size={17} />
+        </span>
+      </a>
+
+      <div className="p-5">
+        <p className="font-bold">
+          {trabajo.MARCA} {trabajo.MODELO}
+        </p>
+
+        <p className="mt-2 line-clamp-2 min-h-12 text-sm leading-6 text-gray-300">
+          {trabajo.DESCRIPCION ||
+            "Evidencia fotográfica del servicio realizado."}
+        </p>
+      </div>
+    </article>
   );
 }
 

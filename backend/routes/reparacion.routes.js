@@ -8,6 +8,10 @@ const GarantiaController = require(
   "../controllers/garantia.controller"
 );
 
+const GaleriaPublicaController = require(
+  "../controllers/galeriaPublica.controller"
+);
+
 const {
   verificarToken,
   permitirRoles,
@@ -20,9 +24,13 @@ const upload = require(
 const router = express.Router();
 
 /*
- * Ruta pública:
- * consulta por DNI usando POST para no colocarlo en la URL.
+ * Rutas públicas.
  */
+router.get(
+  "/galeria-publica",
+  GaleriaPublicaController.obtenerGaleria
+);
+
 router.post(
   "/seguimiento",
   ReparacionController.consultarSeguimiento
