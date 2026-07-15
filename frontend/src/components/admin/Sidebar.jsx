@@ -11,6 +11,7 @@ import {
   LogOut,
   X,
   ClipboardList,
+  ShieldCheck,
 } from "lucide-react";
 
 import {
@@ -33,25 +34,47 @@ const opciones = [
     nombre: "Dashboard",
     ruta: "/admin/dashboard",
     icono: LayoutDashboard,
-    roles: ["ADMINISTRADOR", "TECNICO", "VENDEDOR"],
+    roles: [
+      "ADMINISTRADOR",
+      "TECNICO",
+      "VENDEDOR",
+    ],
   },
   {
     nombre: "Clientes",
     ruta: "/admin/clientes",
     icono: Users,
-    roles: ["ADMINISTRADOR", "VENDEDOR"],
+    roles: [
+      "ADMINISTRADOR",
+      "VENDEDOR",
+    ],
   },
   {
     nombre: "Equipos",
     ruta: "/admin/equipos",
     icono: Smartphone,
-    roles: ["ADMINISTRADOR", "TECNICO"],
+    roles: [
+      "ADMINISTRADOR",
+      "TECNICO",
+    ],
   },
   {
     nombre: "Reparaciones",
     ruta: "/admin/reparaciones",
     icono: Wrench,
-    roles: ["ADMINISTRADOR", "TECNICO"],
+    roles: [
+      "ADMINISTRADOR",
+      "TECNICO",
+    ],
+  },
+  {
+    nombre: "Garantías",
+    ruta: "/admin/garantias",
+    icono: ShieldCheck,
+    roles: [
+      "ADMINISTRADOR",
+      "TECNICO",
+    ],
   },
   {
     nombre: "Inventario",
@@ -67,7 +90,10 @@ const opciones = [
     nombre: "Ventas",
     ruta: "/admin/ventas",
     icono: ShoppingCart,
-    roles: ["ADMINISTRADOR", "VENDEDOR"],
+    roles: [
+      "ADMINISTRADOR",
+      "VENDEDOR",
+    ],
   },
   {
     nombre: "Reservas",
@@ -99,14 +125,21 @@ const opciones = [
   },
 ];
 
-function Sidebar({ abierto = false, cerrar }) {
+function Sidebar({
+  abierto = false,
+  cerrar,
+}) {
   const navigate = useNavigate();
   const location = useLocation();
   const usuario = obtenerUsuario();
 
-  const opcionesPermitidas = opciones.filter((opcion) =>
-    opcion.roles.includes(usuario?.rol)
-  );
+  const opcionesPermitidas =
+    opciones.filter((opcion) =>
+      opcion.roles.includes(
+        usuario?.rol
+      )
+    );
+
   useEffect(() => {
     if (window.innerWidth < 1024) {
       cerrar?.();
@@ -116,7 +149,13 @@ function Sidebar({ abierto = false, cerrar }) {
   function manejarCerrarSesion() {
     cerrarSesion();
     cerrar?.();
-    navigate("/login", { replace: true });
+
+    navigate(
+      "/login",
+      {
+        replace: true,
+      }
+    );
   }
 
   return (
@@ -141,11 +180,13 @@ function Sidebar({ abierto = false, cerrar }) {
             </h1>
 
             <p className="truncate text-xs text-gray-300">
-              {usuario?.nombre || "Usuario"}
+              {usuario?.nombre ||
+                "Usuario"}
             </p>
 
             <p className="truncate text-xs text-gray-500">
-              {usuario?.rol || "Sin rol"}
+              {usuario?.rol ||
+                "Sin rol"}
             </p>
           </div>
         </div>
@@ -160,29 +201,37 @@ function Sidebar({ abierto = false, cerrar }) {
       </div>
 
       <nav className="flex-1 space-y-2 overflow-y-auto px-4 py-6">
-        {opcionesPermitidas.map((opcion) => {
-          const Icono = opcion.icono;
+        {opcionesPermitidas.map(
+          (opcion) => {
+            const Icono =
+              opcion.icono;
 
-          return (
-            <NavLink
-              key={opcion.ruta}
-              to={opcion.ruta}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                  isActive
-                    ? "bg-red-700 text-white"
-                    : "text-gray-300 hover:bg-white/10 hover:text-white"
-                }`
-              }
-            >
-              <Icono size={20} className="shrink-0" />
+            return (
+              <NavLink
+                key={opcion.ruta}
+                to={opcion.ruta}
+                className={({
+                  isActive,
+                }) =>
+                  `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                    isActive
+                      ? "bg-red-700 text-white"
+                      : "text-gray-300 hover:bg-white/10 hover:text-white"
+                  }`
+                }
+              >
+                <Icono
+                  size={20}
+                  className="shrink-0"
+                />
 
-              <span className="truncate">
-                {opcion.nombre}
-              </span>
-            </NavLink>
-          );
-        })}
+                <span className="truncate">
+                  {opcion.nombre}
+                </span>
+              </NavLink>
+            );
+          }
+        )}
       </nav>
 
       <button

@@ -4,6 +4,10 @@ const ReparacionController = require(
   "../controllers/reparacion.controller"
 );
 
+const GarantiaController = require(
+  "../controllers/garantia.controller"
+);
+
 const {
   verificarToken,
   permitirRoles,
@@ -33,6 +37,30 @@ router.use(
     "ADMINISTRADOR",
     "TECNICO"
   )
+);
+
+/*
+ * Garantías.
+ * Estas rutas deben ir antes de la ruta genérica /:id.
+ */
+router.get(
+  "/garantias",
+  GarantiaController.obtenerPanel
+);
+
+router.get(
+  "/garantias/:idGarantia/historial",
+  GarantiaController.obtenerHistorial
+);
+
+router.patch(
+  "/garantias/:idGarantia",
+  GarantiaController.actualizarReclamo
+);
+
+router.post(
+  "/:id/garantias",
+  GarantiaController.crearReclamo
 );
 
 router.get(

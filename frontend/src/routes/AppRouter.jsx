@@ -23,6 +23,7 @@ import Dashboard from "../pages/admin/Dashboard/Dashboard";
 import Clients from "../pages/admin/Clients/Clients";
 import Equipment from "../pages/admin/Equipment/Equipment";
 import Repairs from "../pages/admin/Repairs/Repairs";
+import Guarantees from "../pages/admin/Guarantees/Guarantees";
 import Inventory from "../pages/admin/Inventory/Inventory";
 import Sales from "../pages/admin/Sales/Sales";
 import ReservationsAdmin from "../pages/admin/ReservationsAdmin/ReservationsAdmin";
@@ -97,9 +98,15 @@ function AppRouter() {
               path="equipos"
               element={<Equipment />}
             />
+
             <Route
               path="reparaciones"
               element={<Repairs />}
+            />
+
+            <Route
+              path="garantias"
+              element={<Guarantees />}
             />
           </Route>
         </Route>
@@ -120,6 +127,7 @@ function AppRouter() {
               path="inventario"
               element={<Inventory />}
             />
+
             <Route
               path="reservas"
               element={<ReservationsAdmin />}
@@ -139,10 +147,12 @@ function AppRouter() {
               path="reportes"
               element={<Reports />}
             />
+
             <Route
               path="auditoria"
               element={<Audit />}
             />
+
             <Route
               path="configuracion"
               element={<Settings />}
