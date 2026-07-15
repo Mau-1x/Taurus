@@ -1,4 +1,5 @@
 const express = require("express");
+
 const AuthController = require(
   "../controllers/auth.controller"
 );
@@ -6,18 +7,32 @@ const AuthController = require(
 const {
   verificarToken,
   permitirRoles,
-} = require("../middlewares/auth.middleware");
+} = require(
+  "../middlewares/auth.middleware"
+);
+
+const {
+  loginLimiter,
+  operacionSensibleLimiter,
+} = require(
+  "../middlewares/rateLimit.middleware"
+);
 
 const router = express.Router();
 
 router.post(
   "/registro-admin",
+  operacionSensibleLimiter,
   verificarToken,
   permitirRoles("ADMINISTRADOR"),
   AuthController.registrarAdministrador
 );
 
-router.post("/login", AuthController.iniciarSesion);
+router.post(
+  "/login",
+  loginLimiter,
+  AuthController.iniciarSesion
+);
 
 router.get(
   "/perfil",
@@ -27,6 +42,7 @@ router.get(
 
 router.patch(
   "/cambiar-password",
+  operacionSensibleLimiter,
   verificarToken,
   AuthController.cambiarPassword
 );

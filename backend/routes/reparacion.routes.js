@@ -15,9 +15,21 @@ const GaleriaPublicaController = require(
 const {
   verificarToken,
   permitirRoles,
-} = require("../middlewares/auth.middleware");
+} = require(
+  "../middlewares/auth.middleware"
+);
 
-const upload = require(
+const {
+  seguimientoLimiter,
+  subidaImagenLimiter,
+} = require(
+  "../middlewares/rateLimit.middleware"
+);
+
+const {
+  upload,
+  validarImagenReal,
+} = require(
   "../middlewares/upload.middleware"
 );
 
@@ -33,6 +45,7 @@ router.get(
 
 router.post(
   "/seguimiento",
+  seguimientoLimiter,
   ReparacionController.consultarSeguimiento
 );
 
@@ -88,7 +101,9 @@ router.get(
 
 router.post(
   "/:id/fotos",
+  subidaImagenLimiter,
   upload.single("foto"),
+  validarImagenReal,
   ReparacionController.subirFoto
 );
 
