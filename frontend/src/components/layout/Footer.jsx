@@ -9,6 +9,10 @@ import {
   MessageCircle,
   Music2,
   Navigation,
+  FileText,
+  ShieldCheck,
+  Camera,
+  Database,
 } from "lucide-react";
 
 const enlacesRapidos = [
@@ -35,6 +39,29 @@ const enlacesRapidos = [
   {
     nombre: "Contacto",
     ruta: "/contacto",
+  },
+];
+
+const enlacesLegales = [
+  {
+    nombre: "Privacidad",
+    ruta: "/privacidad",
+    icono: Database,
+  },
+  {
+    nombre: "Términos",
+    ruta: "/terminos",
+    icono: FileText,
+  },
+  {
+    nombre: "Garantías",
+    ruta: "/politica-garantias",
+    icono: ShieldCheck,
+  },
+  {
+    nombre: "Uso de fotografías",
+    ruta: "/autorizacion-fotos",
+    icono: Camera,
   },
 ];
 
@@ -101,7 +128,7 @@ function Footer() {
 
   return (
     <footer className="bg-black text-white">
-      <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 md:grid-cols-2 xl:grid-cols-5">
         <section>
           <Link
             to="/"
@@ -188,6 +215,32 @@ function Footer() {
 
         <section>
           <h2 className="text-lg font-bold">
+            Información legal
+          </h2>
+
+          <nav className="mt-5 space-y-3">
+            {enlacesLegales.map(
+              (enlace) => {
+                const Icono =
+                  enlace.icono;
+
+                return (
+                  <Link
+                    key={enlace.ruta}
+                    to={enlace.ruta}
+                    className="flex items-center gap-2 text-gray-400 transition hover:translate-x-1 hover:text-red-500"
+                  >
+                    <Icono size={16} />
+                    {enlace.nombre}
+                  </Link>
+                );
+              }
+            )}
+          </nav>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-bold">
             Servicios
           </h2>
 
@@ -252,8 +305,9 @@ function Footer() {
           </p>
 
           <p>
-            Servicio técnico de celulares y tablets
-            en Ica.
+            Responsable:
+            {" "}
+            Fernando Hernandez de la Cruz
           </p>
         </div>
       </div>

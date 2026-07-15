@@ -15,6 +15,10 @@ import Products from "../pages/Products/Products";
 import Reservations from "../pages/Reservations/Reservations";
 import Tracking from "../pages/Tracking/Tracking";
 import Contact from "../pages/Contact/Contact";
+import PrivacyPolicy from "../pages/Legal/PrivacyPolicy";
+import TermsConditions from "../pages/Legal/TermsConditions";
+import WarrantyPolicy from "../pages/Legal/WarrantyPolicy";
+import PhotoAuthorization from "../pages/Legal/PhotoAuthorization";
 import Login from "../pages/Login/Login";
 import Unauthorized from "../pages/Unauthorized/Unauthorized";
 import NotFound from "../pages/NotFound/NotFound";
@@ -42,6 +46,26 @@ function AppRouter() {
           <Route path="/reservas" element={<Reservations />} />
           <Route path="/seguimiento" element={<Tracking />} />
           <Route path="/contacto" element={<Contact />} />
+
+          <Route
+            path="/privacidad"
+            element={<PrivacyPolicy />}
+          />
+
+          <Route
+            path="/terminos"
+            element={<TermsConditions />}
+          />
+
+          <Route
+            path="/politica-garantias"
+            element={<WarrantyPolicy />}
+          />
+
+          <Route
+            path="/autorizacion-fotos"
+            element={<PhotoAuthorization />}
+          />
         </Route>
 
         <Route path="/login" element={<Login />} />
@@ -160,7 +184,6 @@ function AppRouter() {
           </Route>
         </Route>
 
-        {/* Siempre debe ir dentro de Routes y al final */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

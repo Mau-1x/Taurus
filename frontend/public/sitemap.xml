@@ -31,4 +31,24 @@
     <loc>https://taurus-1.onrender.com/contacto</loc>
     <priority>0.8</priority>
   </url>
+
+  <url>
+    <loc>https://taurus-1.onrender.com/privacidad</loc>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://taurus-1.onrender.com/terminos</loc>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://taurus-1.onrender.com/politica-garantias</loc>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://taurus-1.onrender.com/autorizacion-fotos</loc>
+    <priority>0.5</priority>
+  </url>
 </urlset>
