@@ -181,7 +181,6 @@ function validarImagenReal(
   return next();
 }
 
-module.exports = {
-  upload,
-  validarImagenReal,
-};
+module.exports = upload;
+module.exports.upload = upload;
+module.exports.validarImagenReal = validarImagenReal;
